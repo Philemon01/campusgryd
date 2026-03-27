@@ -1,0 +1,5 @@
+{
+  "name": "RSU Campus Map",
+  "description": "Interactive campus map for Rivers State University with fuzzy search, building info, and walking directions.",
+  "requestFramePermissions": ["geolocation", "microphone"]
+}
