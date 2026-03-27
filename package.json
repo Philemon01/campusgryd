@@ -31,10 +31,12 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^7.3.1"
+  },
+  "overrides": {
+    "sourcemap-codec": "npm:@jridgewell/sourcemap-codec@^1.4.15"
   }
 }
