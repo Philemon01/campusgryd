@@ -93,6 +93,7 @@ export default function App() {
   const [mapView, setMapView] = useState({ center: RSU_CENTER, zoom: DEFAULT_ZOOM });
   const [isNavigating, setIsNavigating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' | 'success' } | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
@@ -118,6 +119,15 @@ export default function App() {
     }
     return [];
   });
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   // --- Persistence Effects ---
   useEffect(() => {
@@ -145,7 +155,7 @@ export default function App() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Voice search is not supported in this browser.");
+      setNotification({ message: "Voice search is not supported in this browser.", type: 'error' });
       return;
     }
 
@@ -168,11 +178,11 @@ export default function App() {
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       if (event.error === 'not-allowed') {
-        alert("Microphone access is required for voice search. Please check your browser permissions.");
+        setNotification({ message: "Microphone access is required for voice search. Please check your browser permissions.", type: 'error' });
       } else if (event.error === 'no-speech' || event.error === 'aborted') {
         // Just stop listening, no alert needed
       } else {
-        alert(`Voice search error: ${event.error}`);
+        setNotification({ message: `Voice search error: ${event.error}`, type: 'error' });
       }
       setIsListening(false);
     };
@@ -342,7 +352,7 @@ export default function App() {
         },
         (error) => {
           console.error("Error getting location", error);
-          alert("Could not get your location. Please check permissions.");
+          setNotification({ message: "Could not get your location. Please check permissions.", type: 'error' });
         }
       );
     }
@@ -469,6 +479,30 @@ export default function App() {
           onClick={() => setIsSearchFocused(false)} 
         />
       )}
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className={cn(
+              "fixed bottom-24 left-1/2 z-[1000] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 min-w-[300px]",
+              notification.type === 'error' ? "bg-red-600 text-white" : "bg-rsu-green text-white"
+            )}
+          >
+            {notification.type === 'error' ? <X size={20} /> : <Info size={20} />}
+            <span className="font-medium">{notification.message}</span>
+            <button 
+              onClick={() => setNotification(null)}
+              className="ml-auto p-1 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- Top AppBar --- */}
       <header className="absolute top-0 left-0 right-0 z-20 bg-rsu-card/90 backdrop-blur-md border-b border-rsu-border px-4 py-3 flex items-center justify-between shadow-md">
