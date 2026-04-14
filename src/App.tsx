@@ -195,14 +195,26 @@ export default function App() {
   };
 
   // --- Gemini TTS Setup ---
-  const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }), []);
+  const ai = useMemo(() => {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key || key === 'undefined') {
+      console.warn("GEMINI_API_KEY is not defined. AI voice features will be disabled.");
+      return null;
+    }
+    try {
+      return new GoogleGenAI({ apiKey: key });
+    } catch (error) {
+      console.error("Failed to initialize Gemini AI:", error);
+      return null;
+    }
+  }, []);
 
   const playVoiceDirections = async (text: string) => {
     if (isSpeaking) return;
     setIsSpeaking(true);
 
-    // Offline Fallback: Use browser's built-in SpeechSynthesis
-    if (isOffline) {
+    // Offline Fallback or No AI: Use browser's built-in SpeechSynthesis
+    if (isOffline || !ai) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
