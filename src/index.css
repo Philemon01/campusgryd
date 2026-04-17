@@ -2,31 +2,34 @@
 @import "tailwindcss";
 
 :root {
-  --rsu-green: #1A4731;
-  --rsu-gold: #D4A017;
-  --rsu-bg: #F7F5F0;
-  --rsu-text: #111827;
+  --rsu-navy: #001F3F;
+  --rsu-green: #2D6A4F;
+  --rsu-white: #FFFFFF;
+  --rsu-bg: #FFFFFF;
+  --rsu-text: #101827;
   --rsu-card: #FFFFFF;
-  --rsu-border: #F3F4F6;
-  --rsu-muted: #9CA3AF;
+  --rsu-border: #E5E7EB;
+  --rsu-muted: #64748B;
 }
 
 .dark {
-  --rsu-green: #2D6A4F;
-  --rsu-gold: #FFC300;
-  --rsu-bg: #0B1215;
-  --rsu-text: #F9FAFB;
-  --rsu-card: #1A2226;
-  --rsu-border: #2D3748;
-  --rsu-muted: #6B7280;
+  --rsu-navy: #1E293B;
+  --rsu-green: #40916C;
+  --rsu-white: #FFFFFF;
+  --rsu-bg: #0F172A;
+  --rsu-text: #F8FAFC;
+  --rsu-card: #1E293B;
+  --rsu-border: #334155;
+  --rsu-muted: #94A3B8;
 }
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Syne", sans-serif;
 
+  --color-rsu-navy: var(--rsu-navy);
   --color-rsu-green: var(--rsu-green);
-  --color-rsu-gold: var(--rsu-gold);
+  --color-rsu-white: var(--rsu-white);
   --color-rsu-bg: var(--rsu-bg);
   --color-rsu-text: var(--rsu-text);
   --color-rsu-card: var(--rsu-card);
@@ -72,7 +75,7 @@ html, body, #root {
 }
 
 .custom-marker.active {
-  border-color: var(--color-rsu-gold);
+  border-color: var(--color-rsu-navy);
   background: var(--color-rsu-green);
   color: white;
 }

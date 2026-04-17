@@ -63,7 +63,7 @@ const getCategoryIcon = (type: string) => {
 const createCustomIcon = (type: string, isActive: boolean) => {
   return L.divIcon({
     className: cn('custom-marker', isActive && 'active'),
-    html: `<div class="p-1.5">${isActive ? '<div class="w-2 h-2 bg-rsu-gold rounded-full animate-pulse"></div>' : ''}</div>`,
+    html: `<div class="p-1.5">${isActive ? '<div class="w-2 h-2 bg-rsu-green rounded-full animate-pulse"></div>' : ''}</div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
@@ -571,7 +571,7 @@ export default function App() {
             <>
               <Polyline 
                 positions={navigationPath} 
-                color="#D4A017" 
+                color="var(--rsu-navy)" 
                 weight={6} 
                 dashArray="10, 15"
                 className="animate-pulse"
@@ -579,8 +579,8 @@ export default function App() {
               {/* Start Point Marker */}
               <Marker position={navigationPath[0]} icon={L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div class="w-8 h-8 bg-white rounded-full border-4 border-blue-500 flex items-center justify-center shadow-lg animate-pulse">
-                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                html: `<div class="w-8 h-8 bg-white rounded-full border-4 border-rsu-navy flex items-center justify-center shadow-lg animate-pulse">
+                        <div class="w-2 h-2 bg-rsu-navy rounded-full"></div>
                       </div>`,
                 iconSize: [32, 32],
                 iconAnchor: [16, 16]
@@ -588,8 +588,8 @@ export default function App() {
               {/* Destination Point Marker */}
               <Marker position={navigationPath[navigationPath.length - 1]} icon={L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div class="w-10 h-10 bg-rsu-green rounded-full border-4 border-rsu-gold flex items-center justify-center shadow-xl">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                html: `<div class="w-10 h-10 bg-rsu-navy rounded-full border-4 border-rsu-green flex items-center justify-center shadow-xl">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                       </div>`,
                 iconSize: [40, 40],
                 iconAnchor: [20, 20]
@@ -620,7 +620,7 @@ export default function App() {
             exit={{ opacity: 0, y: 50, x: '-50%' }}
             className={cn(
               "fixed bottom-24 left-1/2 z-[1000] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 min-w-[300px]",
-              notification.type === 'error' ? "bg-red-600 text-white" : "bg-rsu-green text-white"
+              notification.type === 'error' ? "bg-red-600 text-white" : "bg-rsu-navy text-white"
             )}
           >
             {notification.type === 'error' ? <X size={20} /> : <Info size={20} />}
@@ -640,17 +640,17 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsMenuOpen(true)}
-            className="p-2 bg-rsu-bg rounded-xl text-rsu-green hover:bg-rsu-green/10 transition-all flex items-center justify-center"
+            className="p-2 bg-rsu-bg rounded-xl text-rsu-navy hover:bg-rsu-navy/10 transition-all flex items-center justify-center shadow-inner border border-rsu-navy/10"
             aria-label="Open menu"
           >
             <Menu size={22} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-rsu-green rounded-lg flex items-center justify-center shadow-sm">
-              <GraduationCap className="text-rsu-gold" size={18} />
+            <div className="w-8 h-8 bg-rsu-navy rounded-lg flex items-center justify-center shadow-sm">
+              <GraduationCap className="text-white" size={18} />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xs font-display font-black text-rsu-green uppercase tracking-tighter leading-none">RSU Campus</h1>
+              <h1 className="text-xs font-display font-black text-rsu-navy uppercase tracking-tighter leading-none">RSU Campus</h1>
               <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">Digital Guide</p>
             </div>
           </div>
@@ -658,7 +658,7 @@ export default function App() {
 
         <div className="flex items-center gap-3">
           <div className="text-right hidden xs:block">
-            <p className="text-[9px] font-mono font-black text-rsu-green uppercase tracking-widest leading-none">Philemon.Exorcist</p>
+            <p className="text-[9px] font-mono font-black text-rsu-navy uppercase tracking-widest leading-none">Philemon.Exorcist</p>
             <p className="text-[7px] font-bold text-rsu-muted uppercase tracking-widest">Lead Developer</p>
           </div>
           <button
@@ -674,7 +674,7 @@ export default function App() {
           </button>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-2 bg-rsu-bg rounded-xl text-rsu-green hover:bg-rsu-green/10 transition-all flex items-center justify-center shadow-inner border border-rsu-green/10"
+            className="p-2 bg-rsu-bg rounded-xl text-rsu-navy hover:bg-rsu-navy/10 transition-all flex items-center justify-center shadow-inner border border-rsu-navy/10"
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -689,7 +689,7 @@ export default function App() {
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="absolute top-24 left-4 right-4 z-[30] bg-rsu-green text-white p-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
+            className="absolute top-24 left-4 right-4 z-[30] bg-rsu-navy text-white p-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
           >
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
               {maneuvers[currentManeuverIndex].type === 'left' && <Navigation2 className="-rotate-90" size={24} />}
@@ -713,7 +713,7 @@ export default function App() {
             </div>
             <button 
               onClick={nextManeuver}
-              className="p-3 bg-white text-rsu-green rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-rsu-gold hover:text-white transition-all shadow-lg hidden md:block"
+              className="p-3 bg-white text-rsu-navy rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-rsu-green hover:text-white transition-all shadow-lg hidden md:block"
               title="Manual skip to next step"
             >
               {currentManeuverIndex === maneuvers.length - 1 ? 'Done' : 'Skip'}
@@ -758,7 +758,7 @@ export default function App() {
                     onClick={startListening}
                     className={cn(
                       "p-2 rounded-full transition-all mr-1",
-                      isListening ? "text-red-500 animate-pulse bg-red-50" : "text-rsu-muted hover:text-rsu-green hover:bg-rsu-bg"
+                      isListening ? "text-red-500 animate-pulse bg-red-50" : "text-rsu-muted hover:text-rsu-navy hover:bg-rsu-bg"
                     )}
                     aria-label={isListening ? "Listening..." : "Search by voice"}
                     title="Voice Search"
@@ -977,7 +977,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-rsu-gold/10 text-rsu-gold rounded-lg">
+                  <div className="p-2 bg-rsu-green/10 text-rsu-green rounded-lg">
                     <MapPin size={18} />
                   </div>
                   <div>
@@ -1001,12 +1001,12 @@ export default function App() {
                 </div>
 
                 {navigationPath && (
-                  <div className="flex items-center gap-3 p-4 bg-rsu-green/5 rounded-2xl border border-rsu-green/10">
-                    <div className="p-2 bg-rsu-green text-white rounded-full">
+                  <div className="flex items-center gap-3 p-4 bg-rsu-navy/5 rounded-2xl border border-rsu-navy/10">
+                    <div className="p-2 bg-rsu-navy text-white rounded-full">
                       <Clock size={18} />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-rsu-green uppercase tracking-wider">Estimated Walk</p>
+                      <p className="text-xs font-bold text-rsu-navy uppercase tracking-wider">Estimated Walk</p>
                       <p className="text-lg font-bold text-rsu-text">
                         ~{calculateWalkingTime(navigationPath[0], navigationPath[1])} mins
                       </p>
@@ -1020,7 +1020,7 @@ export default function App() {
                   {!isNavigating ? (
                     <button 
                       onClick={handleGetDirections}
-                      className="flex-1 bg-rsu-green text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-lg shadow-rsu-green/20"
+                      className="flex-1 bg-rsu-navy text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-lg shadow-rsu-navy/20"
                     >
                       <Navigation size={20} />
                       Go
@@ -1031,10 +1031,10 @@ export default function App() {
                         if (currentManeuverIndex >= 0) {
                           playVoiceDirections(maneuvers[currentManeuverIndex].instruction);
                         } else {
-                          playVoiceDirections(`You are currently navigating to ${selectedLocation.officialName}. Follow the gold dashed line on the map.`);
+                          playVoiceDirections(`You are currently navigating to ${selectedLocation.officialName}. Follow the navigation line on the map.`);
                         }
                       }}
-                      className="flex-1 bg-rsu-gold text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-lg shadow-rsu-gold/20"
+                      className="flex-1 bg-rsu-green text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-lg shadow-rsu-green/20"
                     >
                       <Volume2 size={20} />
                       Voice
@@ -1046,7 +1046,7 @@ export default function App() {
                     className={cn(
                       "p-4 rounded-2xl transition-all border",
                       savedLocationIds.includes(selectedLocation.id)
-                        ? "bg-rsu-gold/10 border-rsu-gold text-rsu-gold"
+                        ? "bg-rsu-green/10 border-rsu-green text-rsu-green"
                         : "bg-rsu-bg border-rsu-border text-rsu-muted hover:bg-rsu-border"
                     )}
                     title={savedLocationIds.includes(selectedLocation.id) ? "Remove from saved" : "Save location"}
@@ -1077,16 +1077,16 @@ export default function App() {
       {/* Branding Overlay (Bottom Left) */}
       <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-2">
         <div className="hidden md:flex items-center gap-2">
-          <div className="w-10 h-10 bg-rsu-green rounded-xl flex items-center justify-center shadow-lg">
-            <GraduationCap className="text-rsu-gold" size={24} />
+          <div className="w-10 h-10 bg-rsu-navy rounded-xl flex items-center justify-center shadow-lg">
+            <GraduationCap className="text-white" size={24} />
           </div>
           <div className="bg-rsu-card/80 backdrop-blur-md px-3 py-1 rounded-lg border border-rsu-border shadow-sm">
-            <h1 className="text-xs font-display font-black text-rsu-green uppercase tracking-tighter">RSU Campus Map</h1>
+            <h1 className="text-xs font-display font-black text-rsu-navy uppercase tracking-tighter">RSU Campus Map</h1>
             <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">Digital Guide</p>
           </div>
         </div>
         <div className="bg-rsu-card/60 backdrop-blur-sm px-2 py-1 rounded-md border border-rsu-border/50 shadow-sm self-start">
-          <p className="text-[9px] font-mono font-bold text-rsu-green/70 tracking-widest uppercase">
+          <p className="text-[9px] font-mono font-bold text-rsu-navy/70 tracking-widest uppercase">
             Dev: Philemon.Exorcist
           </p>
         </div>
@@ -1099,7 +1099,7 @@ export default function App() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-rsu-gold text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 font-bold text-xs"
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-rsu-green text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 font-bold text-xs"
           >
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
             Offline Mode: Using cached map data
@@ -1123,9 +1123,9 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute top-0 left-0 bottom-0 w-full max-w-xs bg-rsu-card z-50 shadow-2xl flex flex-col border-r border-rsu-border"
+              className="absolute top-0 left-0 bottom-0 w-full max-w-xs bg-rsu-card z-[1001] shadow-2xl flex flex-col border-r border-rsu-border"
             >
-              <div className="p-6 border-b border-rsu-border flex justify-between items-center bg-rsu-green text-white">
+              <div className="p-6 border-b border-rsu-border flex justify-between items-center bg-rsu-navy text-white">
                 <div>
                   <h2 className="text-xl font-display font-black uppercase tracking-tight">Campus Menu</h2>
                   <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Rivers State University</p>
@@ -1142,7 +1142,7 @@ export default function App() {
                 {/* Saved Locations Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-2">
-                    <Bookmark className="text-rsu-gold" size={18} />
+                    <Bookmark className="text-rsu-navy" size={18} />
                     <h3 className="text-xs font-black text-rsu-muted uppercase tracking-widest">Saved Locations</h3>
                   </div>
                   
@@ -1155,9 +1155,9 @@ export default function App() {
                               handleLocationSelect(loc);
                               setIsMenuOpen(false);
                             }}
-                            className="w-full flex items-center p-3 bg-rsu-bg rounded-xl hover:bg-rsu-green/5 transition-all text-left border border-transparent hover:border-rsu-green/20"
+                            className="w-full flex items-center p-3 bg-rsu-bg rounded-xl hover:bg-rsu-navy/5 transition-all text-left border border-transparent hover:border-rsu-navy/20"
                           >
-                            <div className="p-2 bg-rsu-card rounded-lg mr-3 text-rsu-green shadow-sm">
+                            <div className="p-2 bg-rsu-card rounded-lg mr-3 text-rsu-navy shadow-sm">
                               {getCategoryIcon(loc.type)}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1189,7 +1189,7 @@ export default function App() {
                 {/* Quick History / Recent Visits */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-2">
-                    <History className="text-rsu-green" size={18} />
+                    <History className="text-rsu-navy" size={18} />
                     <h3 className="text-xs font-black text-rsu-muted uppercase tracking-widest">Recent Visits</h3>
                   </div>
                   
@@ -1202,7 +1202,7 @@ export default function App() {
                             handleLocationSelect(loc);
                             setIsMenuOpen(false);
                           }}
-                          className="w-full flex items-center p-3 bg-rsu-bg rounded-xl hover:bg-rsu-green/5 transition-all text-left border border-transparent hover:border-rsu-green/20"
+                          className="w-full flex items-center p-3 bg-rsu-bg rounded-xl hover:bg-rsu-navy/5 transition-all text-left border border-transparent hover:border-rsu-navy/20"
                         >
                           <div className="p-2 bg-rsu-card rounded-lg mr-3 text-rsu-muted shadow-sm">
                             {getCategoryIcon(loc.type)}
@@ -1224,11 +1224,11 @@ export default function App() {
 
               <div className="p-6 border-t border-rsu-border bg-rsu-bg/50">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-rsu-green rounded-lg flex items-center justify-center">
-                    <GraduationCap className="text-rsu-gold" size={18} />
+                  <div className="w-8 h-8 bg-rsu-navy rounded-lg flex items-center justify-center">
+                    <GraduationCap className="text-white" size={18} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-rsu-green uppercase tracking-tighter">RSU Digital Guide</p>
+                    <p className="text-[10px] font-black text-rsu-navy uppercase tracking-tighter">RSU Digital Guide</p>
                     <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">v1.2.0 Stable</p>
                   </div>
                 </div>
