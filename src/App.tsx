@@ -133,7 +133,38 @@ export default function App() {
     }
   }, [notification]);
 
-  // --- Persistence Effects ---
+  useEffect(() => {
+    let watchId: number | null = null;
+    
+    if (isNavigating && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newPos: [number, number] = [position.coords.latitude, position.coords.longitude];
+          setUserLocation(newPos);
+          
+          if (currentManeuverIndex >= 0 && maneuvers[currentManeuverIndex]) {
+            const maneuverCoords = maneuvers[currentManeuverIndex].coordinates;
+            const dist = getDistanceInMeters(newPos, maneuverCoords);
+            
+            // If user is within threshold (15m) of the maneuver, advance automatically
+            if (dist < 15) {
+              nextManeuver();
+            }
+          }
+        },
+        (error) => {
+          console.error("GPS Watch error:", error);
+        },
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+      );
+    }
+    
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isNavigating, currentManeuverIndex, maneuvers]);
+
+  // --- persistence effects ---
   useEffect(() => {
     localStorage.setItem('saved_locations', JSON.stringify(savedLocationIds));
   }, [savedLocationIds]);
@@ -392,7 +423,7 @@ export default function App() {
     [recentLocationIds]
   );
 
-  const calculateWalkingTime = (coords1: [number, number], coords2: [number, number]) => {
+  const getDistanceInMeters = (coords1: [number, number], coords2: [number, number]) => {
     const R = 6371e3;
     const φ1 = coords1[0] * Math.PI/180;
     const φ2 = coords2[0] * Math.PI/180;
@@ -403,8 +434,11 @@ export default function App() {
               Math.cos(φ1) * Math.cos(φ2) *
               Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const d = R * c;
+    return R * c;
+  };
 
+  const calculateWalkingTime = (coords1: [number, number], coords2: [number, number]) => {
+    const d = getDistanceInMeters(coords1, coords2);
     const speed = 80; // 80m/min
     return Math.ceil(d / speed);
   };
@@ -664,18 +698,25 @@ export default function App() {
               {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin size={24} />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-0.5">
-                {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Step ${currentManeuverIndex + 1} of ${maneuvers.length}`}
-              </p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-xs font-bold text-white/60 uppercase tracking-widest">
+                  {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Step ${currentManeuverIndex + 1} of ${maneuvers.length}`}
+                </p>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/10 rounded-full">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  <span className="text-[8px] font-black uppercase tracking-tighter text-white/80 transition-all">Live GPS</span>
+                </div>
+              </div>
               <h4 className="text-sm font-bold leading-tight">
                 {maneuvers[currentManeuverIndex].instruction}
               </h4>
             </div>
             <button 
               onClick={nextManeuver}
-              className="p-3 bg-white text-rsu-green rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-rsu-gold hover:text-white transition-all shadow-lg"
+              className="p-3 bg-white text-rsu-green rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-rsu-gold hover:text-white transition-all shadow-lg hidden md:block"
+              title="Manual skip to next step"
             >
-              {currentManeuverIndex === maneuvers.length - 1 ? 'Done' : 'Next'}
+              {currentManeuverIndex === maneuvers.length - 1 ? 'Done' : 'Skip'}
             </button>
             <button 
               onClick={endSession}
