@@ -35,7 +35,8 @@ import {
   Circle,
   MapPin
 } from 'lucide-react';
-import { locations, Location } from './data/locations';
+import { locations } from './data/locations';
+import { Location, Maneuver } from './types';
 import { cn } from './lib/utils';
 
 // --- Types ---
@@ -112,6 +113,9 @@ export default function App() {
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isListening, setIsListening] = useState(false);
+  const [maneuvers, setManeuvers] = useState<Maneuver[]>([]);
+  const [currentManeuverIndex, setCurrentManeuverIndex] = useState(-1);
+  const [isVoiceAssistEnabled, setIsVoiceAssistEnabled] = useState(true);
   const [recentLocationIds, setRecentLocationIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const recent = localStorage.getItem('recent_locations');
@@ -340,18 +344,8 @@ export default function App() {
   };
 
   const handleGetDirections = () => {
-    if (!selectedLocation) return;
-    
-    const start = startLocation?.coordinates || userLocation || RSU_CENTER;
-    const end = selectedLocation.coordinates;
-    
-    setNavigationPath([start, end]);
-    setIsNavigating(true);
-    setMapView({ center: [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2], zoom: 17 });
-
-    const startName = startLocation?.officialName || (userLocation ? "your current location" : "the main gate area");
-    const directionsText = `Navigating from ${startName} to ${selectedLocation.officialName}. The estimated walking time is ${calculateWalkingTime(start, end)} minutes. Please follow the highlighted path on your screen.`;
-    playVoiceDirections(directionsText);
+    startNavigation();
+    setIsPanelExpanded(false);
   };
 
   const handleLocateMe = () => {
@@ -368,6 +362,18 @@ export default function App() {
         }
       );
     }
+  };
+
+  const endSession = () => {
+    setIsNavigating(false);
+    setNavigationPath(null);
+    setManeuvers([]);
+    setCurrentManeuverIndex(-1);
+    setSelectedLocation(null);
+    setStartLocation(null);
+    setIsPanelExpanded(false);
+    setSearchQuery('');
+    setNotification({ message: "Navigation session ended.", type: 'info' });
   };
 
   const toggleSaveLocation = (id: string) => {
@@ -403,6 +409,83 @@ export default function App() {
     return Math.ceil(d / speed);
   };
 
+  const generateManeuvers = (start: [number, number], end: [number, number], startName: string, endName: string): Maneuver[] => {
+    const steps: Maneuver[] = [];
+    
+    // Step 1: Start
+    steps.push({
+      instruction: `Starting from ${startName}. Head straight for 50 meters.`,
+      distance: 50,
+      type: 'straight',
+      coordinates: start
+    });
+
+    // Step 2: Intermediate Turn (Simulated)
+    // We create a midpoint that is slightly offset to simulate a turn
+    const midLat = (start[0] + end[0]) / 2;
+    const midLng = (start[1] + end[1]) / 2;
+    const turnType = Math.random() > 0.5 ? 'left' : 'right';
+    
+    steps.push({
+      instruction: `Turn ${turnType} at the next intersection.`,
+      distance: 100,
+      type: turnType,
+      coordinates: [midLat, midLng]
+    });
+
+    // Step 3: Final Stretch
+    steps.push({
+      instruction: `Continue straight for 80 meters towards ${endName}.`,
+      distance: 80,
+      type: 'straight',
+      coordinates: [(midLat + end[0]) / 2, (midLng + end[1]) / 2]
+    });
+
+    // Step 4: Destination
+    steps.push({
+      instruction: `You have arrived at ${endName}. Your destination is on the ${Math.random() > 0.5 ? 'left' : 'right'}.`,
+      distance: 0,
+      type: 'destination',
+      coordinates: end
+    });
+
+    return steps;
+  };
+
+  const startNavigation = () => {
+    if (!selectedLocation) return;
+    
+    const start = startLocation?.coordinates || userLocation || RSU_CENTER;
+    const end = selectedLocation.coordinates;
+    const startName = startLocation?.officialName || (userLocation ? "your current location" : "the main gate area");
+    const endName = selectedLocation.officialName;
+
+    const generatedManeuvers = generateManeuvers(start, end, startName, endName);
+    setManeuvers(generatedManeuvers);
+    setCurrentManeuverIndex(0);
+    setIsNavigating(true);
+    setNavigationPath([start, ...generatedManeuvers.map(m => m.coordinates), end]);
+
+    if (isVoiceAssistEnabled) {
+      playVoiceDirections(generatedManeuvers[0].instruction);
+    }
+  };
+
+  const nextManeuver = () => {
+    if (currentManeuverIndex < maneuvers.length - 1) {
+      const nextIndex = currentManeuverIndex + 1;
+      setCurrentManeuverIndex(nextIndex);
+      if (isVoiceAssistEnabled) {
+        playVoiceDirections(maneuvers[nextIndex].instruction);
+      }
+    } else {
+      setIsNavigating(false);
+      setManeuvers([]);
+      setCurrentManeuverIndex(-1);
+      setNotification({ message: "You have reached your destination!", type: 'success' });
+    }
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-rsu-bg">
       {/* --- Map Layer --- */}
@@ -430,6 +513,8 @@ export default function App() {
                   if (isNavigating) {
                     setIsNavigating(false);
                     setNavigationPath(null);
+                    setManeuvers([]);
+                    setCurrentManeuverIndex(-1);
                   }
                   setSelectedLocation(loc);
                 }
@@ -467,7 +552,7 @@ export default function App() {
                 iconAnchor: [16, 16]
               })} />
               {/* Destination Point Marker */}
-              <Marker position={navigationPath[1]} icon={L.divIcon({
+              <Marker position={navigationPath[navigationPath.length - 1]} icon={L.divIcon({
                 className: 'custom-div-icon',
                 html: `<div class="w-10 h-10 bg-rsu-green rounded-full border-4 border-rsu-gold flex items-center justify-center shadow-xl">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4A017" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -543,6 +628,17 @@ export default function App() {
             <p className="text-[7px] font-bold text-rsu-muted uppercase tracking-widest">Lead Developer</p>
           </div>
           <button
+            onClick={() => setIsVoiceAssistEnabled(!isVoiceAssistEnabled)}
+            className={cn(
+              "p-2 rounded-xl transition-all flex items-center justify-center shadow-inner border",
+              isVoiceAssistEnabled ? "bg-rsu-green/10 text-rsu-green border-rsu-green/20" : "bg-rsu-bg text-rsu-muted border-rsu-border"
+            )}
+            aria-label="Toggle voice assist"
+            title={isVoiceAssistEnabled ? "Voice Assist On" : "Voice Assist Off"}
+          >
+            {isVoiceAssistEnabled ? <Volume2 size={20} /> : <Volume2 size={20} className="opacity-30" />}
+          </button>
+          <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 bg-rsu-bg rounded-xl text-rsu-green hover:bg-rsu-green/10 transition-all flex items-center justify-center shadow-inner border border-rsu-green/10"
             aria-label="Toggle dark mode"
@@ -551,6 +647,46 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* Navigation Maneuver Overlay */}
+      <AnimatePresence>
+        {isNavigating && currentManeuverIndex >= 0 && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="absolute top-24 left-4 right-4 z-[30] bg-rsu-green text-white p-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              {maneuvers[currentManeuverIndex].type === 'left' && <Navigation2 className="-rotate-90" size={24} />}
+              {maneuvers[currentManeuverIndex].type === 'right' && <Navigation2 className="rotate-90" size={24} />}
+              {maneuvers[currentManeuverIndex].type === 'straight' && <Navigation2 size={24} />}
+              {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin size={24} />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-0.5">
+                {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Step ${currentManeuverIndex + 1} of ${maneuvers.length}`}
+              </p>
+              <h4 className="text-sm font-bold leading-tight">
+                {maneuvers[currentManeuverIndex].instruction}
+              </h4>
+            </div>
+            <button 
+              onClick={nextManeuver}
+              className="p-3 bg-white text-rsu-green rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-rsu-gold hover:text-white transition-all shadow-lg"
+            >
+              {currentManeuverIndex === maneuvers.length - 1 ? 'Done' : 'Next'}
+            </button>
+            <button 
+              onClick={endSession}
+              className="p-3 bg-red-500 text-white rounded-xl font-black text-xs uppercase tracking-tighter hover:bg-red-600 transition-all shadow-lg"
+              title="End Session"
+            >
+              Stop
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search Bar & Navigation Controls */}
       <div className="absolute top-20 left-0 right-0 px-4 z-10 flex flex-col items-center">
@@ -592,11 +728,13 @@ export default function App() {
                 {(searchQuery || isNavigating) && (
                   <button 
                     onClick={() => {
-                      setSearchQuery('');
-                      setIsNavigating(false);
-                      setSelectedLocation(null);
-                      setStartLocation(null);
-                      setNavigationPath(null);
+                      if (isNavigating) {
+                        // If navigating, X just clears the search view/panel but keeps journey
+                        setSearchQuery('');
+                        setSelectedLocation(null);
+                      } else {
+                        endSession();
+                      }
                     }}
                     aria-label="Clear search"
                   >
@@ -746,10 +884,11 @@ export default function App() {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedLocation(null);
-                      setNavigationPath(null);
-                      setIsNavigating(false);
-                      setStartLocation(null);
+                      if (isNavigating) {
+                        setSelectedLocation(null);
+                      } else {
+                        endSession();
+                      }
                     }}
                     className="p-2 bg-rsu-bg rounded-full text-rsu-muted hover:bg-rsu-border transition-colors"
                   >
@@ -778,13 +917,9 @@ export default function App() {
                   </p>
                 </div>
                 <button 
-                  onClick={() => {
-                    setSelectedLocation(null);
-                    setNavigationPath(null);
-                    setIsNavigating(false);
-                    setStartLocation(null);
-                  }}
+                  onClick={() => setIsPanelExpanded(false)}
                   className="p-2 bg-rsu-bg rounded-full text-rsu-muted hover:bg-rsu-border transition-colors"
+                  title="Minimize"
                 >
                   <X size={20} />
                 </button>
@@ -803,6 +938,18 @@ export default function App() {
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-rsu-gold/10 text-rsu-gold rounded-lg">
                     <MapPin size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rsu-muted uppercase tracking-wider">Address</p>
+                    <p className="text-sm text-rsu-text font-medium">
+                      {selectedLocation.address || "Main Campus, Nkpolu-Oroworukwo"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-rsu-green/10 text-rsu-green rounded-lg">
+                    <Info size={18} />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-rsu-muted uppercase tracking-wider">Landmark</p>
@@ -839,7 +986,13 @@ export default function App() {
                     </button>
                   ) : (
                     <button 
-                      onClick={() => playVoiceDirections(`You are currently navigating to ${selectedLocation.officialName}. Follow the gold dashed line on the map.`)}
+                      onClick={() => {
+                        if (currentManeuverIndex >= 0) {
+                          playVoiceDirections(maneuvers[currentManeuverIndex].instruction);
+                        } else {
+                          playVoiceDirections(`You are currently navigating to ${selectedLocation.officialName}. Follow the gold dashed line on the map.`);
+                        }
+                      }}
                       className="flex-1 bg-rsu-gold text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-lg shadow-rsu-gold/20"
                     >
                       <Volume2 size={20} />
@@ -859,6 +1012,16 @@ export default function App() {
                   >
                     {savedLocationIds.includes(selectedLocation.id) ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
                   </button>
+                  
+                  {isNavigating && (
+                    <button 
+                      onClick={endSession}
+                      className="p-4 rounded-2xl transition-all bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold"
+                      title="End Session"
+                    >
+                      End Session
+                    </button>
+                  )}
                 </div>
                 
                 <button className="p-4 bg-rsu-bg text-rsu-muted rounded-2xl hover:bg-rsu-border transition-colors">
