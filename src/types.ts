@@ -1,4 +1,4 @@
-export type LocationType = 'faculty' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'landmark';
+export type LocationType = 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
 
 export interface Location {
   id: string;

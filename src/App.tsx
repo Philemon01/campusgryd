@@ -40,22 +40,24 @@ import { Location, Maneuver } from './types';
 import { cn } from './lib/utils';
 
 // --- Types ---
-type Category = 'all' | 'faculty' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library';
+type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
 
 // --- Constants ---
-const RSU_CENTER: [number, number] = [4.8145, 6.9165];
+const RSU_CENTER: [number, number] = [4.7970, 6.9800];
 const DEFAULT_ZOOM = 16;
 
 // --- Icons ---
 const getCategoryIcon = (type: string) => {
   switch (type) {
     case 'faculty': return <GraduationCap size={18} />;
+    case 'college': return <GraduationCap size={18} />;
     case 'admin': return <Building2 size={18} />;
     case 'hostel': return <Home size={18} />;
     case 'food': return <Utensils size={18} />;
     case 'gate': return <DoorOpen size={18} />;
     case 'sports': return <Trophy size={18} />;
     case 'library': return <Library size={18} />;
+    case 'facility': return <Building2 size={18} />;
     default: return <MapPin size={18} />;
   }
 };
@@ -862,15 +864,15 @@ export default function App() {
         {/* Category Filters (Hidden when navigating) */}
         {!isNavigating && (
           <div className="w-full max-w-md mt-3 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {(['all', 'faculty', 'admin', 'hostel', 'food', 'library'] as Category[]).map(cat => (
+            {(['all', 'faculty', 'college', 'admin', 'library', 'gate', 'facility'] as Category[]).map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
                   "whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all shadow-sm border",
                   activeCategory === cat 
-                    ? "bg-rsu-green text-white border-rsu-green" 
-                    : "bg-rsu-card text-rsu-muted border-rsu-border hover:border-rsu-green"
+                    ? "bg-rsu-navy text-white border-rsu-navy" 
+                    : "bg-rsu-card text-rsu-muted border-rsu-border hover:border-rsu-navy"
                 )}
               >
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}

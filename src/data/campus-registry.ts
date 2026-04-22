@@ -1,134 +1,114 @@
 import { CampusEntry } from '../types';
 
 export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
-  "senate_building": {
-    name: "Senate Building",
-    aliases: ["Admin Block", "VC Office", "Senate"],
-    lat: 4.8145,
-    lng: 6.9170,
-    address: "Main Campus, Nkpolu-Oroworukwo",
-    type: "admin",
-    description: "The administrative heart of the university housing the Vice Chancellor's office.",
-    landmark: "Central area, visible from the main entrance road."
-  },
-  "fac_science": {
-    name: "Faculty of Natural and Applied Sciences",
-    aliases: ["Science Faculty", "FNAS", "Sci Fac", "the science block"],
-    lat: 4.8142,
-    lng: 6.9174,
-    address: "Science Block, Main Campus",
-    type: "faculty",
-    description: "Houses Departments of Physics, Chemistry, Biology, Mathematics and Computer Science.",
-    landmark: "Next to the Senate Building"
-  },
-  "fac_eng": {
-    name: "Faculty of Engineering",
-    aliases: ["Engineering", "COE", "Engineering Block"],
-    lat: 4.8155,
-    lng: 6.9185,
-    address: "Engineering Complex, Main Campus",
-    type: "faculty",
-    description: "Home to Civil, Mechanical, Electrical, and Petroleum Engineering departments.",
-    landmark: "Near the Faculty of Science"
-  },
-  "fac_mgt": {
-    name: "Faculty of Management Sciences",
-    aliases: ["Masso", "Management", "FMS"],
-    lat: 4.8130,
-    lng: 6.9160,
-    address: "Management Block, Main Campus",
-    type: "faculty",
-    description: "Houses Accounting, Banking & Finance, Management, and Marketing departments.",
-    landmark: "Close to the Convocation Arena"
-  },
-  "main_library": {
-    name: "University Library",
-    aliases: ["The Library", "Main Lib"],
-    lat: 4.8140,
-    lng: 6.9150,
-    address: "Library Road, Main Campus",
-    type: "library",
-    description: "Central repository of academic resources and study spaces.",
-    landmark: "Opposite the Senate Building"
-  },
   "main_gate": {
-    name: "Main Gate",
-    aliases: ["Front Gate", "Main Entrance"],
-    lat: 4.8100,
-    lng: 6.9180,
-    address: "Ikwerre Road Entrance",
-    type: "gate",
-    description: "Primary entrance to the university campus.",
-    landmark: "Along Ikwerre Road"
+    "name": "RSU Main Gate",
+    "aliases": ["Main Entrance", "Main Gate"],
+    "lat": 4.79419,
+    "lng": 6.98107,
+    "address": "UST Road, Port Harcourt",
+    "type": "gate",
+    "description": "The primary entrance to the university campus.",
+    "landmark": "Abonnema Wharf Road axis"
   },
   "back_gate": {
-    name: "Back Gate",
-    aliases: ["Old Site Gate", "Second Gate"],
-    lat: 4.8180,
-    lng: 6.9120,
-    address: "Old Site Entrance",
-    type: "gate",
-    description: "Secondary entrance often used by students living in Diobu area.",
-    landmark: "Old Site axis"
+    "name": "CCE Back Gate",
+    "aliases": ["Back Gate", "CCE Entrance"],
+    "lat": 4.79381,
+    "lng": 6.98346,
+    "address": "Eagle Island Axis",
+    "type": "gate",
+    "description": "Secondary entrance primarily serving the Centre for Continuous Education.",
+    "landmark": "Eagle Island bridge area"
+  },
+  "faculty_science": {
+    "name": "Faculty of Science",
+    "aliases": ["Science Block", "Faculty of Science Building"],
+    "lat": 4.79796,
+    "lng": 6.97809,
+    "address": "Road B, RSU Campus",
+    "type": "faculty",
+    "description": "Main building for science departments including Physics, Chemistry, and Biology.",
+    "landmark": "Near Faculty of Engineering"
+  },
+  "faculty_law": {
+    "name": "Faculty of Law",
+    "aliases": ["Law Block", "Law Faculty"],
+    "lat": 4.79928,
+    "lng": 6.97798,
+    "address": "RSU Campus",
+    "type": "faculty",
+    "description": "Academic building for legal studies.",
+    "landmark": "Opposite Faculty of Management Sciences"
+  },
+  "faculty_management_sciences": {
+    "name": "Faculty of Management Sciences",
+    "aliases": ["Management Sciences", "Business Block"],
+    "lat": 4.79918,
+    "lng": 6.98088,
+    "address": "Lane F, RSU Campus",
+    "type": "faculty",
+    "description": "Houses departments for Accounting, Banking, and Management.",
+    "landmark": "Close to the Senate Building"
+  },
+  "faculty_environmental_sciences": {
+    "name": "Faculty of Environmental Sciences",
+    "aliases": ["Environmental Sciences", "Env. Sci Block"],
+    "lat": 4.79962,
+    "lng": 6.97915,
+    "address": "RSU Campus",
+    "type": "faculty",
+    "description": "Houses Architecture, Estate Management, and Urban Planning.",
+    "landmark": "Adjacent to the Faculty of Law"
+  },
+  "faculty_engineering": {
+    "name": "Faculty of Engineering",
+    "aliases": ["Engineering Block", "FE Building"],
+    "lat": 4.79469,
+    "lng": 6.97810,
+    "address": "Eagle Island Road, RSU Campus",
+    "type": "faculty",
+    "description": "Primary block for all engineering disciplines.",
+    "landmark": "Near the Faculty of Science"
+  },
+  "faculty_education": {
+    "name": "Faculty of Education",
+    "aliases": ["Education Block", "Edu Faculty"],
+    "lat": 4.80052,
+    "lng": 6.98252,
+    "address": "RSU Campus",
+    "type": "faculty",
+    "description": "Academic center for educational management and science education.",
+    "landmark": "North-eastern campus quadrant"
+  },
+  "college_medical_sciences": {
+    "name": "College of Medical Sciences",
+    "aliases": ["Medical College", "CMS Building"],
+    "lat": 4.79622,
+    "lng": 6.98116,
+    "address": "Road F, RSU Campus",
+    "type": "college",
+    "description": "Central hub for medical and clinical science departments.",
+    "landmark": "Near University Health Centre"
+  },
+  "university_library": {
+    "name": "RSU University Library",
+    "aliases": ["Main Library", "School Library"],
+    "lat": 4.80167,
+    "lng": 6.97833,
+    "address": "RSU Campus",
+    "type": "library",
+    "description": "The central repository for academic books and research materials.",
+    "landmark": "Behind Faculty of Environmental Sciences"
   },
   "convocation_arena": {
-    name: "Convocation Arena",
-    aliases: ["The Arena", "Convocation Square"],
-    lat: 4.8125,
-    lng: 6.9155,
-    address: "Event Square, Main Campus",
-    type: "sports",
-    description: "Venue for major university events, matriculations, and convocations.",
-    landmark: "Near the Faculty of Management Sciences"
-  },
-  "medical_center": {
-    name: "University Medical Center",
-    aliases: ["Health Center", "Sick Bay"],
-    lat: 4.8160,
-    lng: 6.9140,
-    address: "Medical Road, Main Campus",
-    type: "admin",
-    description: "Primary healthcare facility for students and staff.",
-    landmark: "Behind the Faculty of Science"
-  },
-  "nddc_hostel": {
-    name: "NDDC Female Hostel",
-    aliases: ["NDDC", "New Hostel"],
-    lat: 4.8175,
-    lng: 6.9150,
-    address: "Female Residential Area",
-    type: "hostel",
-    description: "Modern female student accommodation provided by NDDC.",
-    landmark: "Near the back gate axis"
-  },
-  "male_hostel_a": {
-    name: "Hostel Block A",
-    aliases: ["Block A", "Male Hostel"],
-    lat: 4.8185,
-    lng: 6.9145,
-    address: "Male Residential Area, Old Site",
-    type: "hostel",
-    description: "Male student residential block.",
-    landmark: "Old site area"
-  },
-  "shopping_complex": {
-    name: "University Shopping Complex",
-    aliases: ["The Complex", "Market", "Food Court"],
-    lat: 4.8135,
-    lng: 6.9175,
-    address: "Student Hub, Main Campus",
-    type: "food",
-    description: "Hub for food, stationery, and other student services.",
-    landmark: "Close to the Faculty of Science"
-  },
-  "post_graduate_school": {
-    name: "School of Post Graduate Studies",
-    aliases: ["SPGS", "PG School"],
-    lat: 4.8150,
-    lng: 6.9130,
-    address: "PG Block, Main Campus",
-    type: "faculty",
-    description: "Administrative and academic hub for postgraduate research.",
-    landmark: "Near the Medical Center"
+    "name": "Convocation Arena",
+    "aliases": ["Arena", "UST Convocation Square"],
+    "lat": 4.78906,
+    "lng": 6.99921,
+    "address": "RSU Campus Area",
+    "type": "facility",
+    "description": "Large event space for graduation and university ceremonies.",
+    "landmark": "Stadium road axis"
   }
 };
