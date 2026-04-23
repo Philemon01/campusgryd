@@ -33,7 +33,8 @@ import {
   History,
   Trash2,
   Circle,
-  MapPin
+  MapPin,
+  Layers
 } from 'lucide-react';
 import { locations } from './data/locations';
 import { Location, Maneuver } from './types';
@@ -95,6 +96,7 @@ export default function App() {
   const [navigationPath, setNavigationPath] = useState<[number, number][] | null>(null);
   const [mapView, setMapView] = useState({ center: RSU_CENTER, zoom: DEFAULT_ZOOM });
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isSatelliteView, setIsSatelliteView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' | 'success' } | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -144,6 +146,9 @@ export default function App() {
           const newPos: [number, number] = [position.coords.latitude, position.coords.longitude];
           setUserLocation(newPos);
           
+          // Auto-center map on user during navigation
+          setMapView(prev => ({ ...prev, center: newPos, zoom: 18 }));
+
           if (currentManeuverIndex >= 0 && maneuvers[currentManeuverIndex]) {
             const maneuverCoords = maneuvers[currentManeuverIndex].coordinates;
             const dist = getDistanceInMeters(newPos, maneuverCoords);
@@ -448,38 +453,30 @@ export default function App() {
   const generateManeuvers = (start: [number, number], end: [number, number], startName: string, endName: string): Maneuver[] => {
     const steps: Maneuver[] = [];
     
-    // Step 1: Start
+    // Calculate intermediate points to simulate road turns (Manhattan-style paths)
+    // We create a "staircase" path between start and end
+    const mid1: [number, number] = [start[0], end[1]]; // Turn 1: Horizontal then vertical
+    const mid2: [number, number] = [end[0], start[1]]; // Turn 2: Vertical then horizontal
+    
+    // Choose one mid point to create a single turn path
+    const mid = Math.random() > 0.5 ? mid1 : mid2;
+
     steps.push({
-      instruction: `Starting from ${startName}. Head straight for 50 meters.`,
-      distance: 50,
+      instruction: `Starting from ${startName}. Walk straight.`,
+      distance: Math.floor(getDistanceInMeters(start, mid)),
       type: 'straight',
       coordinates: start
     });
 
-    // Step 2: Intermediate Turn (Simulated)
-    // We create a midpoint that is slightly offset to simulate a turn
-    const midLat = (start[0] + end[0]) / 2;
-    const midLng = (start[1] + end[1]) / 2;
-    const turnType = Math.random() > 0.5 ? 'left' : 'right';
-    
     steps.push({
-      instruction: `Turn ${turnType} at the next intersection.`,
-      distance: 100,
-      type: turnType,
-      coordinates: [midLat, midLng]
+      instruction: `Turn ${mid === mid1 ? (end[0] > start[0] ? 'right' : 'left') : (end[1] > start[1] ? 'right' : 'left')} at the junction.`,
+      distance: Math.floor(getDistanceInMeters(mid, end)),
+      type: 'right', // placeholder type
+      coordinates: mid
     });
 
-    // Step 3: Final Stretch
     steps.push({
-      instruction: `Continue straight for 80 meters towards ${endName}.`,
-      distance: 80,
-      type: 'straight',
-      coordinates: [(midLat + end[0]) / 2, (midLng + end[1]) / 2]
-    });
-
-    // Step 4: Destination
-    steps.push({
-      instruction: `You have arrived at ${endName}. Your destination is on the ${Math.random() > 0.5 ? 'left' : 'right'}.`,
+      instruction: `Arriving at ${endName}. Your destination is ahead.`,
       distance: 0,
       type: 'destination',
       coordinates: end
@@ -511,6 +508,14 @@ export default function App() {
     if (currentManeuverIndex < maneuvers.length - 1) {
       const nextIndex = currentManeuverIndex + 1;
       setCurrentManeuverIndex(nextIndex);
+      
+      // Focus map on the next maneuver point
+      setMapView(prev => ({ 
+        ...prev, 
+        center: maneuvers[nextIndex].coordinates, 
+        zoom: 19 
+      }));
+
       if (isVoiceAssistEnabled) {
         playVoiceDirections(maneuvers[nextIndex].instruction);
       }
@@ -530,12 +535,21 @@ export default function App() {
           center={RSU_CENTER} 
           zoom={DEFAULT_ZOOM} 
           zoomControl={false}
-          className="w-full h-full"
+          className={cn("w-full h-full", isSatelliteView && "satellite-active")}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          {isSatelliteView ? (
+            <TileLayer
+              attribution='&copy; Google Maps'
+              url="https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              subdomains={['0', '1', '2', '3']}
+              maxZoom={20}
+            />
+          ) : (
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          )}
           
           <MapController center={mapView.center} zoom={mapView.zoom} />
           
@@ -562,45 +576,91 @@ export default function App() {
             <Marker 
               position={userLocation}
               icon={L.divIcon({
-                className: 'user-marker',
-                html: '<div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-lg"></div>',
-                iconSize: [16, 16]
+                className: 'user-marker-google',
+                html: `<div class="relative w-12 h-12 flex items-center justify-center">
+                        {/* Pulse effect */}
+                        <div class="absolute w-10 h-10 bg-blue-500/20 rounded-full animate-ping opacity-70"></div>
+                        
+                        {/* Navigation Arrow and Core Dot */}
+                        <div class="relative w-8 h-8 flex items-center justify-center">
+                          {/* The blue heading beam/arrow */}
+                          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute transform -rotate-[15deg]">
+                            <path d="M16 2L24 28L16 22L8 28L16 2Z" fill="#4285F4" fill-opacity="0.3" stroke="#4285F4" stroke-width="0.5" />
+                          </svg>
+                          
+                          {/* The core dot */}
+                          <div class="z-10 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md">
+                            <div class="w-2.5 h-2.5 bg-[#4285F4] rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>`,
+                iconSize: [48, 48],
+                iconAnchor: [24, 24]
               })}
             />
           )}
 
           {navigationPath && (
             <>
+              {/* Outer stroke for the route to make it pop */}
               <Polyline 
                 positions={navigationPath} 
-                color="var(--rsu-navy)" 
-                weight={6} 
-                dashArray="10, 15"
-                className="animate-pulse"
+                color="#FFFFFF" 
+                weight={10} 
+                opacity={1}
               />
-              {/* Start Point Marker */}
+              {/* Main prominent blue route line */}
+              <Polyline 
+                positions={navigationPath} 
+                color="#4285F4" 
+                weight={7} 
+                opacity={1}
+                lineCap="round"
+                lineJoin="round"
+              />
+              
+              {/* Departure Marker - Google Maps style blue circle with white ring */}
               <Marker position={navigationPath[0]} icon={L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div class="w-8 h-8 bg-white rounded-full border-4 border-rsu-navy flex items-center justify-center shadow-lg animate-pulse">
-                        <div class="w-2 h-2 bg-rsu-navy rounded-full"></div>
-                      </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-              })} />
-              {/* Destination Point Marker */}
-              <Marker position={navigationPath[navigationPath.length - 1]} icon={L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div class="w-10 h-10 bg-rsu-navy rounded-full border-4 border-rsu-green flex items-center justify-center shadow-xl">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                html: `<div class="w-10 h-10 flex items-center justify-center">
+                        <div class="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
+                          <div class="w-4 h-4 bg-[#4285F4] rounded-full"></div>
+                        </div>
                       </div>`,
                 iconSize: [40, 40],
                 iconAnchor: [20, 20]
+              })} />
+
+              {/* Arrival Marker - Classic Red Map Pin */}
+              <Marker position={navigationPath[navigationPath.length - 1]} icon={L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="relative w-10 h-10 flex items-center justify-center drop-shadow-xl">
+                        <svg viewBox="0 0 24 24" class="w-12 h-12" fill="#EA4335" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" stroke="white" stroke-width="0.5"/>
+                        </svg>
+                      </div>`,
+                iconSize: [48, 48],
+                iconAnchor: [24, 48]
               })} />
             </>
           )}
 
           <ZoomControl position="bottomright" />
         </MapContainer>
+        
+        {/* Map Type Toggle Button */}
+        <button
+          onClick={() => setIsSatelliteView(!isSatelliteView)}
+          className={cn(
+            "absolute bottom-28 right-3 z-10 p-3 rounded-full shadow-lg border transition-all duration-300 flex items-center justify-center",
+            isSatelliteView 
+              ? "bg-rsu-navy text-white border-rsu-navy" 
+              : "bg-white text-rsu-navy border-rsu-border hover:bg-rsu-navy/10"
+          )}
+          title={isSatelliteView ? "Switch to Map View" : "Switch to Satellite View"}
+        >
+          <Layers size={22} className={cn(isSatelliteView && "animate-pulse")} />
+        </button>
       </div>
 
       {/* --- UI Overlay --- */}
@@ -691,13 +751,13 @@ export default function App() {
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="absolute top-24 left-4 right-4 z-[30] bg-rsu-navy text-white p-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
+            className="absolute top-24 left-4 right-4 z-[30] bg-[#4285F4] text-white p-5 rounded-2xl shadow-2xl flex items-center gap-5 border border-white/20"
           >
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              {maneuvers[currentManeuverIndex].type === 'left' && <Navigation2 className="-rotate-90" size={24} />}
-              {maneuvers[currentManeuverIndex].type === 'right' && <Navigation2 className="rotate-90" size={24} />}
-              {maneuvers[currentManeuverIndex].type === 'straight' && <Navigation2 size={24} />}
-              {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin size={24} />}
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
+              {maneuvers[currentManeuverIndex].type === 'left' && <Navigation2 className="-rotate-90 text-white fill-white" size={28} />}
+              {maneuvers[currentManeuverIndex].type === 'right' && <Navigation2 className="rotate-90 text-white fill-white" size={28} />}
+              {maneuvers[currentManeuverIndex].type === 'straight' && <Navigation2 className="text-white fill-white" size={28} />}
+              {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin className="text-white fill-white" size={28} />}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">

@@ -53,8 +53,8 @@ html, body, #root {
   z-index: 0;
 }
 
-/* Dark mode map tiles */
-.dark .leaflet-tile-pane {
+/* Dark mode map tiles - Only invert standard view, not satellite photos */
+.dark .leaflet-container:not(.satellite-active) .leaflet-tile-pane {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
