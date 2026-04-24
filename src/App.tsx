@@ -37,7 +37,7 @@ import {
   Layers
 } from 'lucide-react';
 import { locations } from './data/locations';
-import { Location, Maneuver } from './types';
+import { Location, Maneuver, RouteOption } from './types';
 import { cn } from './lib/utils';
 
 // --- Types ---
@@ -133,6 +133,9 @@ export default function App() {
   const [maneuvers, setManeuvers] = useState<Maneuver[]>([]);
   const [currentManeuverIndex, setCurrentManeuverIndex] = useState(-1);
   const [isVoiceAssistEnabled, setIsVoiceAssistEnabled] = useState(true);
+  const [availableRoutes, setAvailableRoutes] = useState<RouteOption[]>([]);
+  const [plannedRoutes, setPlannedRoutes] = useState<RouteOption[]>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState<'fastest' | 'shortest'>('fastest');
   const [recentLocationIds, setRecentLocationIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const recent = localStorage.getItem('recent_locations');
@@ -149,6 +152,19 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      const start = startLocation?.coordinates || userLocation || RSU_CENTER;
+      const end = selectedLocation.coordinates;
+      const startName = startLocation?.officialName || (userLocation ? "Current Location" : "Main Gate");
+      const endName = selectedLocation.officialName;
+      const routes = generateRouteOptions(start, end, startName, endName);
+      setPlannedRoutes(routes);
+    } else {
+      setPlannedRoutes([]);
+    }
+  }, [selectedLocation, startLocation, userLocation]);
 
   useEffect(() => {
     let watchId: number | null = null;
@@ -419,6 +435,8 @@ export default function App() {
     setIsNavigating(false);
     setNavigationPath(null);
     setManeuvers([]);
+    setAvailableRoutes([]);
+    setPlannedRoutes([]);
     setCurrentManeuverIndex(-1);
     setSelectedLocation(null);
     setStartLocation(null);
@@ -471,13 +489,9 @@ export default function App() {
   const generateManeuvers = (start: [number, number], end: [number, number], startName: string, endName: string): Maneuver[] => {
     const steps: Maneuver[] = [];
     
-    // Calculate intermediate points to simulate road turns (Manhattan-style paths)
-    // We create a "staircase" path between start and end
-    const mid1: [number, number] = [start[0], end[1]]; // Turn 1: Horizontal then vertical
-    const mid2: [number, number] = [end[0], start[1]]; // Turn 2: Vertical then horizontal
-    
-    // Choose one mid point to create a single turn path
-    const mid = Math.random() > 0.5 ? mid1 : mid2;
+    const mid1: [number, number] = [start[0], end[1]];
+    const mid2: [number, number] = [end[0], start[1]];
+    const mid = mid1; 
 
     steps.push({
       instruction: `Starting from ${startName}. Walk straight.`,
@@ -487,9 +501,9 @@ export default function App() {
     });
 
     steps.push({
-      instruction: `Turn ${mid === mid1 ? (end[0] > start[0] ? 'right' : 'left') : (end[1] > start[1] ? 'right' : 'left')} at the junction.`,
+      instruction: `Turn at the junction.`,
       distance: Math.floor(getDistanceInMeters(mid, end)),
-      type: 'right', // placeholder type
+      type: 'right',
       coordinates: mid
     });
 
@@ -503,6 +517,34 @@ export default function App() {
     return steps;
   };
 
+  const generateRouteOptions = (start: [number, number], end: [number, number], startName: string, endName: string): RouteOption[] => {
+    const directDist = getDistanceInMeters(start, end);
+    const mid: [number, number] = [start[0], end[1]];
+    const staircaseDist = getDistanceInMeters(start, mid) + getDistanceInMeters(mid, end);
+
+    return [
+      {
+        id: 'shortest',
+        name: 'Shortest Path',
+        duration: Math.ceil(directDist / 70), // 70m/min
+        distance: Math.floor(directDist),
+        path: [start, end],
+        maneuvers: [
+          { instruction: `Head directly from ${startName} to ${endName}.`, distance: Math.floor(directDist), type: 'straight', coordinates: start },
+          { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: end }
+        ]
+      },
+      {
+        id: 'fastest',
+        name: 'Standard Route',
+        duration: Math.ceil(staircaseDist / 90), // faster speed on main route
+        distance: Math.floor(staircaseDist),
+        path: [start, mid, end],
+        maneuvers: generateManeuvers(start, end, startName, endName)
+      }
+    ];
+  };
+
   const startNavigation = () => {
     if (!selectedLocation) return;
     
@@ -511,14 +553,19 @@ export default function App() {
     const startName = startLocation?.officialName || (userLocation ? "your current location" : "the main gate area");
     const endName = selectedLocation.officialName;
 
-    const generatedManeuvers = generateManeuvers(start, end, startName, endName);
-    setManeuvers(generatedManeuvers);
+    const routes = generateRouteOptions(start, end, startName, endName);
+    setAvailableRoutes(routes);
+    
+    // Choose the selected route (default to first one if not set)
+    const activeRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
+    
+    setManeuvers(activeRoute.maneuvers);
     setCurrentManeuverIndex(0);
     setIsNavigating(true);
-    setNavigationPath([start, ...generatedManeuvers.map(m => m.coordinates), end]);
+    setNavigationPath(activeRoute.path);
 
     if (isVoiceAssistEnabled) {
-      playVoiceDirections(generatedManeuvers[0].instruction);
+      playVoiceDirections(`Routing to ${endName}. Choosing ${activeRoute.name}. estimated time ${activeRoute.duration} minutes.`);
     }
   };
 
@@ -594,17 +641,13 @@ export default function App() {
               icon={L.divIcon({
                 className: 'user-marker-google',
                 html: `<div class="relative w-12 h-12 flex items-center justify-center">
-                        {/* Pulse effect */}
                         <div class="absolute w-10 h-10 bg-blue-500/20 rounded-full animate-ping opacity-70"></div>
                         
-                        {/* Navigation Arrow and Core Dot */}
                         <div class="relative w-8 h-8 flex items-center justify-center">
-                          {/* The blue heading beam/arrow */}
                           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute transform -rotate-[15deg]">
                             <path d="M16 2L24 28L16 22L8 28L16 2Z" fill="#4285F4" fill-opacity="0.3" stroke="#4285F4" stroke-width="0.5" />
                           </svg>
                           
-                          {/* The core dot */}
                           <div class="z-10 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md">
                             <div class="w-2.5 h-2.5 bg-[#4285F4] rounded-full"></div>
                           </div>
@@ -1042,10 +1085,10 @@ export default function App() {
                         e.stopPropagation();
                         handleGetDirections();
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-rsu-navy text-white text-xs font-black uppercase tracking-tighter rounded-xl shadow-lg shadow-rsu-navy/20 active:scale-95 transition-transform"
+                      className="flex items-center gap-2 px-6 py-3 bg-rsu-navy text-white text-sm font-black uppercase tracking-tighter rounded-2xl shadow-xl shadow-rsu-navy/20 active:scale-95 transition-all hover:bg-rsu-navy/90 hover:shadow-rsu-navy/30"
                     >
-                      <Navigation size={14} />
-                      Go
+                      <Navigation size={18} />
+                      Start Navigation
                     </button>
                   )}
 
@@ -1126,6 +1169,62 @@ export default function App() {
                     </p>
                   </div>
                 </div>
+
+                {/* Route Options Selection (only when planning) */}
+                {!isNavigating && plannedRoutes.length > 0 && (
+                  <div className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-rsu-muted">Select Route</h4>
+                      <div className="h-px flex-1 bg-rsu-border/30 mx-3" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {plannedRoutes.map((route) => {
+                        const isSelected = selectedRouteId === route.id;
+                        return (
+                          <button
+                            key={route.id}
+                            onClick={() => setSelectedRouteId(route.id)}
+                            className={cn(
+                              "relative p-4 rounded-2xl border-2 transition-all duration-300 text-left overflow-hidden group active:scale-[0.98]",
+                              isSelected 
+                                ? "border-rsu-navy bg-rsu-navy/5 shadow-lg" 
+                                : "border-rsu-border bg-white dark:bg-rsu-card/50 hover:border-rsu-navy/40"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
+                                  isSelected ? "bg-rsu-navy text-white" : "bg-rsu-muted/10 text-rsu-muted"
+                                )}>
+                                  {route.name}
+                                </span>
+                                {route.id === 'shortest' && (
+                                  <span className="text-[8px] font-bold text-rsu-green bg-rsu-green/10 px-1.5 py-0.5 rounded uppercase">Recommended</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock size={12} className={isSelected ? "text-rsu-navy" : "text-rsu-muted"} />
+                                <span className={cn("text-sm font-black", isSelected ? "text-rsu-navy" : "text-rsu-navy dark:text-white")}>
+                                  {route.duration} min
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-1.5">
+                                <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-rsu-navy animate-pulse" : "bg-rsu-muted/40")} />
+                                <span className="text-[11px] font-bold text-rsu-muted uppercase tracking-tight">
+                                  {route.distance} meters
+                                </span>
+                              </div>
+                              <ArrowRight size={14} className={cn("transition-transform group-hover:translate-x-1", isSelected ? "text-rsu-navy" : "text-rsu-muted/30")} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {navigationPath && (
                   <div className="flex items-center gap-3 p-4 bg-rsu-navy/5 rounded-2xl border border-rsu-navy/10">

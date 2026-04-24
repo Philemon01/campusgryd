@@ -29,3 +29,12 @@ export interface Maneuver {
   type: 'straight' | 'left' | 'right' | 'destination';
   coordinates: [number, number];
 }
+
+export interface RouteOption {
+  id: 'fastest' | 'shortest';
+  name: string;
+  duration: number; // in minutes
+  distance: number; // in meters
+  path: [number, number][];
+  maneuvers: Maneuver[];
+}
