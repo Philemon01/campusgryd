@@ -22,14 +22,54 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "landmark": "Eagle Island bridge area"
   },
   "faculty_science": {
-    "name": "Faculty of Science (Main)",
-    "aliases": ["Science Block", "Biochemistry", "Chemistry", "Geology", "Mathematics", "Medical Laboratory Science", "Microbiology", "Physics", "Science Lab", "Biological Sciences"],
+    "name": "Faculty of Science (Main Building)",
+    "aliases": ["Science Block", "Biochemistry", "Geology", "Mathematics", "Medical Laboratory Science", "Biological Sciences"],
     "lat": 4.7980,
     "lng": 6.9781,
     "address": "Road B, RSU Campus",
     "type": "faculty",
-    "description": "Houses departments of Biochemistry, Chemistry, Geology, Mathematics, Medical Laboratory Science, Microbiology, and Physics.",
+    "description": "Main administrative and lecture block for the Faculty of Science.",
     "landmark": "Near Faculty of Engineering"
+  },
+  "dept_physics": {
+    "name": "Department of Physics",
+    "aliases": ["Physics Department", "Physics Block"],
+    "lat": 4.79796,
+    "lng": 6.97809,
+    "address": "Faculty of Science Building, Road B",
+    "type": "faculty",
+    "description": "Academic department for physical sciences and research laboratories.",
+    "landmark": "Inside the Faculty of Science Building"
+  },
+  "dept_chemistry": {
+    "name": "Department of Chemistry",
+    "aliases": ["Chemistry Department", "Chemistry Block"],
+    "lat": 4.79797,
+    "lng": 6.9795,
+    "address": "Chemistry Department Building, Lane F",
+    "type": "faculty",
+    "description": "Houses the Chemistry labs, lecture seats, and departmental offices.",
+    "landmark": "Near Lane F Science Cluster"
+  },
+  "dept_plant_science": {
+    "name": "Department of Plant Science and Biotechnology",
+    "aliases": ["Plant Science", "Biotechnology", "Plant Science & Biotech"],
+    "lat": 4.79796,
+    "lng": 6.97809,
+    "address": "Faculty of Science Building, Road B",
+    "type": "faculty",
+    "description": "Specialized department for botanical studies and biotechnology research.",
+    "landmark": "Inside the Faculty of Science Building"
+  },
+  "dept_microbiology": {
+    "name": "Department of Microbiology",
+    "aliases": ["Microbiology Department", "Microbiology Block"],
+    "lat": 4.79761,
+    "lng": 6.98068,
+    "address": "Science Axis, RSU Campus",
+    "type": "faculty",
+    "description": "Dedicated academic unit for microbiology research and diagnostic labs.",
+    "landmark": "Science Cluster Area"
   },
   "dept_computer_science": {
     "name": "Department of Computer Science",
@@ -184,12 +224,12 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
   "mechanical_workshop": {
     "name": "Mechanical Engineering Workshop",
     "aliases": ["Mechanical Workshop", "Engineering Workshop", "Mech Workshop", "Fabrication Lab"],
-    "lat": 4.7940,
-    "lng": 6.9775,
-    "address": "Off Eagle Island Road, RSU Campus",
+    "lat": 4.79377,
+    "lng": 6.97952,
+    "address": "Engineering Cluster, Eagle Island Area",
     "type": "facility",
     "description": "The central workshop for mechanical engineering students, housing machinery and fabrication tools.",
-    "landmark": "Behind Faculty of Engineering"
+    "landmark": "Engineering Cluster Area"
   },
   "faculty_education": {
     "name": "Faculty of Education",

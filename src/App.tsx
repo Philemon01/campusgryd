@@ -1300,23 +1300,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Branding Overlay (Bottom Left) */}
-      <div className="absolute bottom-6 left-6 z-10 pointer-events-none flex flex-col gap-2">
-        <div className="hidden md:flex items-center gap-2">
-          <div className="w-10 h-10 bg-rsu-navy rounded-xl flex items-center justify-center shadow-lg">
-            <GraduationCap className="text-white" size={24} />
-          </div>
-          <div className="bg-rsu-card/80 backdrop-blur-md px-3 py-1 rounded-lg border border-rsu-border shadow-sm">
-            <h1 className="text-xs font-display font-black text-rsu-navy uppercase tracking-tighter">RSU Campus Map</h1>
-            <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">Digital Guide</p>
-          </div>
-        </div>
-        <div className="bg-rsu-card/60 backdrop-blur-sm px-2 py-1 rounded-md border border-rsu-border/50 shadow-sm self-start">
-          <p className="text-[9px] font-mono font-bold text-rsu-navy/70 tracking-widest uppercase">
-            Dev: Philemon.Exorcist
-          </p>
-        </div>
-      </div>
+
 
       {/* Offline Indicator */}
       <AnimatePresence>
