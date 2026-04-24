@@ -64,11 +64,24 @@ const getCategoryIcon = (type: string) => {
 };
 
 const createCustomIcon = (type: string, isActive: boolean) => {
+  const bgColor = isActive ? 'bg-rsu-navy dark:bg-[#4285F4]' : 'bg-white dark:bg-rsu-card';
+  const dotColor = isActive ? 'bg-white' : 'bg-rsu-muted dark:bg-rsu-green';
+  
   return L.divIcon({
     className: cn('custom-marker', isActive && 'active'),
-    html: `<div class="p-1.5">${isActive ? '<div class="w-2 h-2 bg-rsu-green rounded-full animate-pulse"></div>' : ''}</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `
+      <div class="relative flex items-center justify-center w-10 h-10">
+        ${isActive ? `
+          <div class="absolute w-14 h-14 bg-[#4285F4]/20 rounded-full animate-ping opacity-75"></div>
+          <div class="absolute w-10 h-10 bg-[#4285F4]/30 rounded-full animate-pulse"></div>
+        ` : ''}
+        <div class="z-10 ${bgColor} w-7 h-7 rounded-full shadow-xl border-2 border-white dark:border-rsu-border flex items-center justify-center transition-all duration-300 ${isActive ? 'scale-125 ring-4 ring-[#4285F4]/20' : 'scale-100 hover:scale-110'}">
+          <div class="w-2.5 h-2.5 rounded-full ${dotColor}"></div>
+        </div>
+      </div>
+    `,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
   });
 };
 
@@ -430,6 +443,11 @@ export default function App() {
     [recentLocationIds]
   );
 
+  const totalRemainingDistance = useMemo(() => {
+    if (!maneuvers || currentManeuverIndex < 0) return 0;
+    return maneuvers.slice(currentManeuverIndex).reduce((acc, m) => acc + m.distance, 0);
+  }, [maneuvers, currentManeuverIndex]);
+
   const getDistanceInMeters = (coords1: [number, number], coords2: [number, number]) => {
     const R = 6371e3;
     const φ1 = coords1[0] * Math.PI/180;
@@ -539,15 +557,19 @@ export default function App() {
         >
           {isSatelliteView ? (
             <TileLayer
-              attribution='&copy; Google Maps'
-              url="https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-              subdomains={['0', '1', '2', '3']}
+              key="google-satellite"
+              attribution="&copy; Google Earth Imagery"
+              url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
               maxZoom={20}
+              zIndex={1}
             />
           ) : (
             <TileLayer
+              key="osm-standard"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              zIndex={1}
             />
           )}
           
@@ -560,12 +582,6 @@ export default function App() {
               icon={createCustomIcon(loc.type, selectedLocation?.id === loc.id || startLocation?.id === loc.id)}
               eventHandlers={{
                 click: () => {
-                  if (isNavigating) {
-                    setIsNavigating(false);
-                    setNavigationPath(null);
-                    setManeuvers([]);
-                    setCurrentManeuverIndex(-1);
-                  }
                   setSelectedLocation(loc);
                 }
               }}
@@ -648,19 +664,7 @@ export default function App() {
           <ZoomControl position="bottomright" />
         </MapContainer>
         
-        {/* Map Type Toggle Button */}
-        <button
-          onClick={() => setIsSatelliteView(!isSatelliteView)}
-          className={cn(
-            "absolute bottom-28 right-3 z-10 p-3 rounded-full shadow-lg border transition-all duration-300 flex items-center justify-center",
-            isSatelliteView 
-              ? "bg-rsu-navy text-white border-rsu-navy" 
-              : "bg-white text-rsu-navy border-rsu-border hover:bg-rsu-navy/10"
-          )}
-          title={isSatelliteView ? "Switch to Map View" : "Switch to Satellite View"}
-        >
-          <Layers size={22} className={cn(isSatelliteView && "animate-pulse")} />
-        </button>
+        {/* Map Type Toggle Button moved to Floating Action Buttons */}
       </div>
 
       {/* --- UI Overlay --- */}
@@ -698,31 +702,44 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- Top AppBar --- */}
-      <header className="absolute top-0 left-0 right-0 z-20 bg-rsu-card/90 backdrop-blur-md border-b border-rsu-border px-4 py-3 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
+      <header className="absolute top-0 left-0 right-0 z-20 bg-rsu-card/95 backdrop-blur-xl border-b border-rsu-border/20 px-4 py-4 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => setIsMenuOpen(true)}
-            className="p-2 bg-rsu-bg rounded-xl text-rsu-navy hover:bg-rsu-navy/10 transition-all flex items-center justify-center shadow-inner border border-rsu-navy/10"
+            className="p-2.5 bg-rsu-navy text-white rounded-xl hover:bg-rsu-navy/90 transition-all flex items-center justify-center shadow-lg border border-white/10 active:scale-95"
             aria-label="Open menu"
           >
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-rsu-navy rounded-lg flex items-center justify-center shadow-sm">
-              <GraduationCap className="text-white" size={18} />
+          
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-rsu-navy to-[#0a2e5c] rounded-xl flex items-center justify-center shadow-md border border-white/20">
+              <GraduationCap className="text-white drop-shadow-sm" size={24} />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-xs font-display font-black text-rsu-navy uppercase tracking-tighter leading-none">RSU Campus</h1>
-              <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">Digital Guide</p>
+            <div className="flex flex-col justify-center">
+              <h1 className="text-sm md:text-base font-display font-black text-rsu-navy dark:text-white uppercase tracking-tight leading-none">
+                Rivers State University
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[9px] font-bold text-white bg-rsu-green px-1.5 py-0.5 rounded uppercase tracking-wider">
+                  Campus Map
+                </span>
+                <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest hidden xs:block">
+                  Digital Guide
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden xs:block">
-            <p className="text-[9px] font-mono font-black text-rsu-navy uppercase tracking-widest leading-none">Philemon.Exorcist</p>
-            <p className="text-[7px] font-bold text-rsu-muted uppercase tracking-widest">Lead Developer</p>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:flex flex-col items-end">
+            <p className="text-[10px] font-mono font-black text-rsu-navy dark:text-rsu-green uppercase tracking-widest leading-none">
+              Philemon.Exorcist
+            </p>
+            <p className="text-[8px] font-bold text-rsu-muted uppercase mt-0.5">System Architect</p>
           </div>
+          
           <button
             onClick={() => setIsVoiceAssistEnabled(!isVoiceAssistEnabled)}
             className={cn(
@@ -760,16 +777,30 @@ export default function App() {
               {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin className="text-white fill-white" size={28} />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-xs font-bold text-white/60 uppercase tracking-widest">
+              <div className="flex items-center flex-wrap gap-2 mb-1">
+                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded-full">
                   {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Step ${currentManeuverIndex + 1} of ${maneuvers.length}`}
                 </p>
-                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/10 rounded-full">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  <span className="text-[8px] font-black uppercase tracking-tighter text-white/80 transition-all">Live GPS</span>
+                {maneuvers[currentManeuverIndex].distance > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full">
+                    <ArrowRight size={10} className="text-white" />
+                    <span className="text-[10px] font-black uppercase tracking-tighter text-white">
+                      {maneuvers[currentManeuverIndex].distance}m
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20 rounded-full">
+                  <Clock size={10} className="text-white/80" />
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-white/90">
+                    {totalRemainingDistance}m total
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/30 rounded-full border border-green-500/20">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-[8px] font-black uppercase tracking-tighter text-white/80">Live</span>
                 </div>
               </div>
-              <h4 className="text-sm font-bold leading-tight">
+              <h4 className="text-sm md:text-base font-bold leading-tight">
                 {maneuvers[currentManeuverIndex].instruction}
               </h4>
             </div>
@@ -943,10 +974,30 @@ export default function App() {
       </div>
 
       {/* Floating Action Buttons */}
-      <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-10">
+      <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
+        <button
+          onClick={() => {
+            setIsSatelliteView(!isSatelliteView);
+            setNotification({ 
+              message: `Switched to ${!isSatelliteView ? 'Satellite' : 'Map'} View`, 
+              type: 'info' 
+            });
+          }}
+          className={cn(
+            "p-3 rounded-full shadow-lg border transition-all duration-300 flex items-center justify-center",
+            isSatelliteView 
+              ? "bg-[#4285F4] text-white border-[#4285F4]" 
+              : "bg-white text-rsu-navy border-rsu-border hover:bg-rsu-navy/10"
+          )}
+          title={isSatelliteView ? "Switch to Map View" : "Switch to Satellite View"}
+        >
+          <Layers size={24} className={cn(isSatelliteView && "animate-pulse")} />
+        </button>
+
         <button 
           onClick={handleLocateMe}
           className="p-3 bg-rsu-card rounded-full shadow-lg text-rsu-green hover:bg-rsu-bg transition-colors border border-rsu-border"
+          title="Locate Me"
         >
           <LocateFixed size={24} />
         </button>
@@ -975,15 +1026,29 @@ export default function App() {
             >
               <div className="w-12 h-1.5 bg-rsu-border rounded-full mb-2" />
               {!isPanelExpanded && (
-                <div className="flex items-center gap-2 px-4 w-full">
+                <div className="flex items-center gap-3 px-6 w-full">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-display font-black text-rsu-green truncate leading-tight">
                       {selectedLocation.officialName}
                     </h3>
                     <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest truncate">
-                      {selectedLocation.type} • Tap to view details
+                      {selectedLocation.type} • Tap for more
                     </p>
                   </div>
+                  
+                  {!isNavigating && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGetDirections();
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-rsu-navy text-white text-xs font-black uppercase tracking-tighter rounded-xl shadow-lg shadow-rsu-navy/20 active:scale-95 transition-transform"
+                    >
+                      <Navigation size={14} />
+                      Go
+                    </button>
+                  )}
+
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -993,9 +1058,9 @@ export default function App() {
                         endSession();
                       }
                     }}
-                    className="p-2 bg-rsu-bg rounded-full text-rsu-muted hover:bg-rsu-border transition-colors"
+                    className="p-2.5 bg-rsu-bg rounded-xl text-rsu-muted hover:bg-rsu-border transition-colors border border-rsu-border"
                   >
-                    <X size={16} />
+                    <X size={18} />
                   </button>
                 </div>
               )}

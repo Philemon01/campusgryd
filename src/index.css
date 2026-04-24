@@ -58,6 +58,10 @@ html, body, #root {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
+.leaflet-container.satellite-active .leaflet-tile-pane {
+  filter: none !important;
+}
+
 /* Custom Leaflet Marker Styling */
 .custom-marker {
   display: flex;
