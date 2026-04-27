@@ -51,17 +51,50 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 }) => {
   return (
     <div className="absolute top-20 left-0 right-0 px-4 z-10 flex flex-col items-center">
-      <div className="w-full max-w-2xl flex flex-col gap-2">
-        <div className="flex-1 flex flex-col gap-2">
-          {/* Destination Search */}
-          <div className="bg-rsu-card rounded-2xl shadow-xl border border-rsu-border overflow-hidden transition-all duration-300">
-            <div className="flex items-center px-4 py-3">
-              <Search className="text-rsu-muted mr-3" size={20} />
+      <div className="w-full max-w-2xl flex flex-col gap-1.5">
+        <div className="flex-1 flex flex-col gap-1.5">
+          {/* Start Point Search */}
+          <div className={cn(
+            "bg-rsu-card rounded-xl shadow-md border transition-all duration-300",
+            searchMode === 'start' ? "border-blue-400 ring-2 ring-blue-400/10" : "border-rsu-border"
+          )}>
+            <div className="flex items-center px-4 py-2.5">
+              <Navigation2 className="text-blue-500 mr-3" size={18} />
               <input 
                 type="text"
-                placeholder={isNavigating ? "Your Destination" : "Where to? (e.g. Masso, Library...)"}
-                className="flex-1 outline-none bg-transparent text-rsu-text font-medium placeholder:text-rsu-muted"
-                value={isNavigating ? (selectedLocation?.officialName || "") : searchQuery}
+                placeholder="From: Current Location"
+                className="flex-1 outline-none bg-transparent text-[11px] font-bold text-rsu-text placeholder:text-rsu-muted uppercase tracking-tighter"
+                value={searchMode === 'start' ? searchQuery : (startLocation?.officialName || (userLocation ? "My GPS Location" : ""))}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  setSearchMode('start');
+                  setSearchQuery('');
+                }}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchMode('start');
+                }}
+              />
+              {startLocation && (
+                <button onClick={() => handleLocationSelect(null as any)}>
+                  <X size={14} className="text-rsu-muted" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Destination Search */}
+          <div className={cn(
+            "bg-rsu-card rounded-xl shadow-md border transition-all duration-300",
+            searchMode === 'destination' ? "border-rsu-green ring-2 ring-rsu-green/10" : "border-rsu-border"
+          )}>
+            <div className="flex items-center px-4 py-2.5">
+              <Search className="text-rsu-green mr-3" size={18} />
+              <input 
+                type="text"
+                placeholder="To: Search destination..."
+                className="flex-1 outline-none bg-transparent text-[11px] font-bold text-rsu-text placeholder:text-rsu-muted uppercase tracking-tighter"
+                value={searchMode === 'destination' ? searchQuery : (selectedLocation?.officialName || "")}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setSearchMode('destination');
@@ -76,57 +109,31 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 <button 
                   onClick={startListening}
                   className={cn(
-                    "p-2 rounded-full transition-all mr-1",
-                    isListening ? "text-red-500 animate-pulse bg-red-50" : "text-rsu-muted hover:text-rsu-navy hover:bg-rsu-bg"
+                    "p-1.5 rounded-full transition-all mr-1",
+                    isListening ? "text-red-500 animate-pulse bg-red-50" : "text-rsu-muted hover:text-rsu-navy"
                   )}
-                  title="Voice Search"
                 >
-                  <Mic size={20} />
+                  <Mic size={18} />
                 </button>
               )}
-              {(searchQuery || isNavigating) && (
+              {(searchQuery || isNavigating || selectedLocation) && !isListening && (
                 <button 
                   onClick={() => {
                     if (isNavigating) {
-                      // This part was slightly different in original code but logical equivalent
                       endSession();
+                    } else if (searchMode === 'destination') {
+                      setSearchQuery('');
+                      handleLocationSelect(null as any);
                     } else {
                       setSearchQuery('');
                     }
                   }}
                 >
-                  <X size={18} className="text-rsu-muted" />
+                  <X size={16} className="text-rsu-muted" />
                 </button>
               )}
             </div>
           </div>
-
-          {/* Start Point */}
-          {(isNavigating || (isSearchFocused && searchMode === 'start')) && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-rsu-card rounded-2xl shadow-xl border border-rsu-border overflow-hidden"
-            >
-              <div className="flex items-center px-4 py-3">
-                <Navigation2 className="text-blue-500 mr-3" size={20} />
-                <input 
-                  type="text"
-                  placeholder="Starting point (Current Location)"
-                  className="flex-1 outline-none bg-transparent text-rsu-text font-medium placeholder:text-rsu-muted"
-                  value={startLocation?.officialName || (userLocation ? "Current Location" : "")}
-                  onFocus={() => {
-                    setIsSearchFocused(true);
-                    setSearchMode('start');
-                  }}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchMode('start');
-                  }}
-                />
-              </div>
-            </motion.div>
-          )}
         </div>
 
         <div className="flex gap-2">

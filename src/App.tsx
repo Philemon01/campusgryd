@@ -348,46 +348,94 @@ export default function App() {
     return Math.ceil(d / 80);
   };
 
-  // Defining Main Campus Paths to follow actual roads
-  const CAMPUS_WAYPOINTS: [number, number][] = [
-    [4.7958, 6.9835], // Main Gate
-    [4.7965, 6.9818], // Convocation Arena Junction
-    [4.7975, 6.9805], // Admin Junction
-    [4.7985, 6.9800], // Library Junction
-    [4.7995, 6.9790], // Science/Physics Junction
-    [4.8010, 6.9785], // Hostel Area Junction
-    [4.7955, 6.9795], // Law/Agric Road
-    [4.7940, 6.9810], // Back Gate Area
+  // Defining Main Campus Road Network (Graph)
+  const ROAD_NODES: [number, number][] = [
+    [4.7958, 6.9835], // 0: Main Gate
+    [4.7962, 6.9826], // 1: Entrance Road
+    [4.7966, 6.9817], // 2: Convocation Junction
+    [4.7972, 6.9811], // 3: Toward Admin
+    [4.7976, 6.9804], // 4: Admin Junction (Center)
+    [4.7986, 6.9799], // 5: Library Junction
+    [4.7997, 6.9791], // 6: Science/Physics Junction
+    [4.8011, 6.9784], // 7: North Campus / Hostels
+    [4.7964, 6.9797], // 8: Law/Agric Branch start
+    [4.7953, 6.9793], // 9: Deep Law Area
+    [4.7946, 6.9806], // 10: South Road
+    [4.7939, 6.9812], // 11: Back Gate
   ];
 
-  const findNearestWaypoint = (point: [number, number]): [number, number] => {
-    let nearest = CAMPUS_WAYPOINTS[0];
-    let minDist = getDistanceInMeters(point, nearest);
-    
-    CAMPUS_WAYPOINTS.forEach(wp => {
-      const dist = getDistanceInMeters(point, wp);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = wp;
+  const ROAD_EDGES: { [key: number]: number[] } = {
+    0: [1],
+    1: [0, 2],
+    2: [1, 3, 10],
+    3: [2, 4],
+    4: [3, 5, 8],
+    5: [4, 6],
+    6: [5, 7],
+    7: [6],
+    8: [4, 9, 10],
+    9: [8],
+    10: [2, 8, 11],
+    11: [10]
+  };
+
+  const findNearestRoadNode = (point: [number, number]): number => {
+    let nearestIdx = 0;
+    let minDist = getDistanceInMeters(point, ROAD_NODES[0]);
+    ROAD_NODES.forEach((node, idx) => {
+      const d = getDistanceInMeters(point, node);
+      if (d < minDist) {
+        minDist = d;
+        nearestIdx = idx;
       }
     });
-    return nearest;
+    return nearestIdx;
+  };
+
+  const findShortestRoadPath = (startIdx: number, endIdx: number): number[] => {
+    const queue: [number, number[]][] = [[startIdx, [startIdx]]];
+    const visited = new Set<number>();
+    
+    while (queue.length > 0) {
+      const [curr, path] = queue.shift()!;
+      if (curr === endIdx) return path;
+      if (visited.has(curr)) continue;
+      visited.add(curr);
+      
+      const neighbors = ROAD_EDGES[curr] || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          queue.push([neighbor, [...path, neighbor]]);
+        }
+      }
+    }
+    return [startIdx, endIdx]; // Fallback
   };
 
   const generateRouteOptions = (start: [number, number], end: [number, number], startName: string, endName: string): RouteOption[] => {
     const directDist = getDistanceInMeters(start, end);
-    const nearStart = findNearestWaypoint(start);
-    const nearEnd = findNearestWaypoint(end);
+    const startNodeIdx = findNearestRoadNode(start);
+    const endNodeIdx = findNearestRoadNode(end);
     
-    // Create a path that goes from Start -> nearest road -> nearest road to end -> End
+    // Road Path: Start -> Nearest Node -> ...Road Network... -> Nearest Node to End -> End
+    const pathIndices = findShortestRoadPath(startNodeIdx, endNodeIdx);
+    const roadWaypoints = pathIndices.map(idx => ROAD_NODES[idx]);
+    
     const realisticPath: [number, number][] = [start];
-    if (getDistanceInMeters(start, nearStart) > 20) realisticPath.push(nearStart);
-    if (nearStart[0] !== nearEnd[0] || nearStart[1] !== nearEnd[1]) realisticPath.push(nearEnd);
+    // Only add nearest road node if we aren't already there
+    if (getDistanceInMeters(start, roadWaypoints[0]) > 5) {
+      realisticPath.push(roadWaypoints[0]);
+    }
+    // Add road network waypoints
+    roadWaypoints.slice(1, -1).forEach(wp => realisticPath.push(wp));
+    // Add end node if not already there
+    if (getDistanceInMeters(realisticPath[realisticPath.length-1], roadWaypoints[roadWaypoints.length-1]) > 5) {
+      realisticPath.push(roadWaypoints[roadWaypoints.length-1]);
+    }
     realisticPath.push(end);
 
     const roadDist = realisticPath.reduce((acc, curr, i) => {
-      if (i === 0) return 0;
-      return acc + getDistanceInMeters(realisticPath[i-1], curr);
+      return i === 0 ? 0 : acc + getDistanceInMeters(realisticPath[i-1], curr);
     }, 0);
 
     const realisticManeuvers: Maneuver[] = realisticPath.map((coord, i) => {
@@ -396,13 +444,14 @@ export default function App() {
       }
       const distToNext = Math.floor(getDistanceInMeters(coord, realisticPath[i+1]));
       let instruction = "";
-      if (i === 0) instruction = `Depart from ${startName} and head to the main road.`;
-      else instruction = `Follow the path towards the next intersection.`;
+      if (i === 0) instruction = `Depart from ${startName} and head to the campus road.`;
+      else if (i === realisticPath.length - 2) instruction = `Turn towards your destination property.`;
+      else instruction = `Proceed along the road for ${distToNext}m.`;
       
       return { 
         instruction, 
         distance: distToNext, 
-        type: i === 0 ? 'straight' : (i % 2 === 0 ? 'left' : 'right'), 
+        type: i === 0 ? 'straight' : (i % 3 === 0 ? 'left' : 'right'), 
         coordinates: coord 
       };
     });
@@ -421,7 +470,7 @@ export default function App() {
       },
       {
         id: 'fastest',
-        name: 'Standard Road Route',
+        name: 'Official Campus Road',
         duration: Math.ceil(roadDist / 90),
         distance: Math.floor(roadDist),
         path: realisticPath,
@@ -473,6 +522,7 @@ export default function App() {
         navigationPath={navigationPath}
         onLocationSelect={(loc) => setSelectedLocation(loc)}
         createCustomIcon={createCustomIcon}
+        onMapMove={(center, zoom) => setMapView({ center, zoom })}
       />
 
       <Header 

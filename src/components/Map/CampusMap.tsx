@@ -17,15 +17,39 @@ interface CampusMapProps {
   createCustomIcon: (type: string, isActive: boolean) => L.DivIcon;
 }
 
-function MapController({ center, zoom }: { center: [number, number], zoom: number }) {
+function MapController({ center, zoom, onMapMove }: { center: [number, number], zoom: number, onMapMove: (center: [number, number], zoom: number) => void }) {
   const map = useMap();
+  
+  // Update parents when map is moved manually
   React.useEffect(() => {
-    map.setView(center, zoom, { animate: true, duration: 1 });
+    const onMove = () => {
+      const newCenter = map.getCenter();
+      const newZoom = map.getZoom();
+      onMapMove([newCenter.lat, newCenter.lng], newZoom);
+    };
+
+    map.on('moveend', onMove);
+    return () => {
+      map.off('moveend', onMove);
+    };
+  }, [map, onMapMove]);
+
+  // Handle external view changes (selecting a location, etc)
+  React.useEffect(() => {
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+    
+    // Only set view if it's significantly different to avoid fighting the user
+    const dist = L.latLng(center).distanceTo(currentCenter);
+    if (dist > 5 || Math.abs(zoom - currentZoom) > 0.1) {
+      map.setView(center, zoom, { animate: true, duration: 1 });
+    }
   }, [center, zoom, map]);
+  
   return null;
 }
 
-export const CampusMap: React.FC<CampusMapProps> = ({
+export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number, number], zoom: number) => void }> = ({
   mapView,
   isSatelliteView,
   filteredLocations,
@@ -34,7 +58,8 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   userLocation,
   navigationPath,
   onLocationSelect,
-  createCustomIcon
+  createCustomIcon,
+  onMapMove
 }) => {
   return (
     <MapContainer 
@@ -43,6 +68,11 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       zoomControl={false}
       className={cn("w-full h-full", isSatelliteView && "satellite-active")}
     >
+      <MapController 
+        center={mapView.center} 
+        zoom={mapView.zoom} 
+        onMapMove={onMapMove}
+      />
       {isSatelliteView ? (
         <TileLayer
           key="google-satellite"
@@ -60,8 +90,6 @@ export const CampusMap: React.FC<CampusMapProps> = ({
           zIndex={1}
         />
       )}
-      
-      <MapController center={mapView.center} zoom={mapView.zoom} />
       
       {filteredLocations.map(loc => (
         <Marker 
