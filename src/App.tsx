@@ -154,10 +154,30 @@ export default function App() {
   }, [notification]);
 
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newPos: [number, number] = [position.coords.latitude, position.coords.longitude];
+          setUserLocation(newPos);
+          // Only change map center if user hasn't selected anything yet
+          if (!selectedLocation && !isNavigating) {
+            setMapView(prev => ({ ...prev, center: newPos, zoom: 16 }));
+          }
+        },
+        (error) => {
+          console.error("Initial GPS error:", error);
+          // If geolocation fails, we stay at RSU_CENTER
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  }, [selectedLocation, isNavigating]);
+
+  useEffect(() => {
     if (selectedLocation) {
       const start = startLocation?.coordinates || userLocation || RSU_CENTER;
       const end = selectedLocation.coordinates;
-      const startName = startLocation?.officialName || (userLocation ? "Current Location" : "Main Gate");
+      const startName = startLocation?.officialName || (userLocation ? "Your Location" : "Campus Center");
       const endName = selectedLocation.officialName;
       const routes = generateRouteOptions(start, end, startName, endName);
       setPlannedRoutes(routes);
@@ -550,7 +570,7 @@ export default function App() {
     
     const start = startLocation?.coordinates || userLocation || RSU_CENTER;
     const end = selectedLocation.coordinates;
-    const startName = startLocation?.officialName || (userLocation ? "your current location" : "the main gate area");
+    const startName = startLocation?.officialName || (userLocation ? "Your Location" : "Campus Center");
     const endName = selectedLocation.officialName;
 
     const routes = generateRouteOptions(start, end, startName, endName);
