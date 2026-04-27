@@ -176,7 +176,7 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "aliases": ["Physics Dept", "Physics"],
     "lat": 4.798317263009538,
     "lng": 6.97954136878252,
-    "address": "Science Cluster",
+    "address": "Science Cluster, behind maritime science",
     "type": "faculty",
     "description": "Academic home for Physics programs.",
     "landmark": "Faculty of Science Cluster"
