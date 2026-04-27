@@ -147,7 +147,7 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
                   {selectedLocation.type}
                 </span>
               </div>
-              <h2 className="text-xl font-display font-black text-rsu-navy leading-tight truncate">
+              <h2 className="text-xl font-display font-black text-rsu-green leading-tight truncate">
                 {selectedLocation.officialName}
               </h2>
             </div>

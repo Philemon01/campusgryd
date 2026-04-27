@@ -348,38 +348,84 @@ export default function App() {
     return Math.ceil(d / 80);
   };
 
-  const generateManeuvers = (start: [number, number], end: [number, number], startName: string, endName: string): Maneuver[] => {
-    const mid: [number, number] = [start[0], end[1]];
-    return [
-      { instruction: `Starting from ${startName}. Walk straight.`, distance: Math.floor(getDistanceInMeters(start, mid)), type: 'straight', coordinates: start },
-      { instruction: `Turn at the junction.`, distance: Math.floor(getDistanceInMeters(mid, end)), type: 'right', coordinates: mid },
-      { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: end }
-    ];
+  // Defining Main Campus Paths to follow actual roads
+  const CAMPUS_WAYPOINTS: [number, number][] = [
+    [4.7958, 6.9835], // Main Gate
+    [4.7965, 6.9818], // Convocation Arena Junction
+    [4.7975, 6.9805], // Admin Junction
+    [4.7985, 6.9800], // Library Junction
+    [4.7995, 6.9790], // Science/Physics Junction
+    [4.8010, 6.9785], // Hostel Area Junction
+    [4.7955, 6.9795], // Law/Agric Road
+    [4.7940, 6.9810], // Back Gate Area
+  ];
+
+  const findNearestWaypoint = (point: [number, number]): [number, number] => {
+    let nearest = CAMPUS_WAYPOINTS[0];
+    let minDist = getDistanceInMeters(point, nearest);
+    
+    CAMPUS_WAYPOINTS.forEach(wp => {
+      const dist = getDistanceInMeters(point, wp);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = wp;
+      }
+    });
+    return nearest;
   };
 
   const generateRouteOptions = (start: [number, number], end: [number, number], startName: string, endName: string): RouteOption[] => {
     const directDist = getDistanceInMeters(start, end);
-    const mid: [number, number] = [start[0], end[1]];
-    const staircaseDist = getDistanceInMeters(start, mid) + getDistanceInMeters(mid, end);
+    const nearStart = findNearestWaypoint(start);
+    const nearEnd = findNearestWaypoint(end);
+    
+    // Create a path that goes from Start -> nearest road -> nearest road to end -> End
+    const realisticPath: [number, number][] = [start];
+    if (getDistanceInMeters(start, nearStart) > 20) realisticPath.push(nearStart);
+    if (nearStart[0] !== nearEnd[0] || nearStart[1] !== nearEnd[1]) realisticPath.push(nearEnd);
+    realisticPath.push(end);
+
+    const roadDist = realisticPath.reduce((acc, curr, i) => {
+      if (i === 0) return 0;
+      return acc + getDistanceInMeters(realisticPath[i-1], curr);
+    }, 0);
+
+    const realisticManeuvers: Maneuver[] = realisticPath.map((coord, i) => {
+      if (i === realisticPath.length - 1) {
+        return { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: coord };
+      }
+      const distToNext = Math.floor(getDistanceInMeters(coord, realisticPath[i+1]));
+      let instruction = "";
+      if (i === 0) instruction = `Depart from ${startName} and head to the main road.`;
+      else instruction = `Follow the path towards the next intersection.`;
+      
+      return { 
+        instruction, 
+        distance: distToNext, 
+        type: i === 0 ? 'straight' : (i % 2 === 0 ? 'left' : 'right'), 
+        coordinates: coord 
+      };
+    });
+
     return [
       {
         id: 'shortest',
-        name: 'Shortest Path',
+        name: 'Direct Path (Off-Road)',
         duration: Math.ceil(directDist / 70),
         distance: Math.floor(directDist),
         path: [start, end],
         maneuvers: [
-          { instruction: `Head directly from ${startName} to ${endName}.`, distance: Math.floor(directDist), type: 'straight', coordinates: start },
+          { instruction: `Head directly from ${startName} to ${endName}. Note: This path cuts across terrain.`, distance: Math.floor(directDist), type: 'straight', coordinates: start },
           { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: end }
         ]
       },
       {
         id: 'fastest',
-        name: 'Standard Route',
-        duration: Math.ceil(staircaseDist / 90),
-        distance: Math.floor(staircaseDist),
-        path: [start, mid, end],
-        maneuvers: generateManeuvers(start, end, startName, endName)
+        name: 'Standard Road Route',
+        duration: Math.ceil(roadDist / 90),
+        distance: Math.floor(roadDist),
+        path: realisticPath,
+        maneuvers: realisticManeuvers
       }
     ];
   };
