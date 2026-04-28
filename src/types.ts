@@ -10,6 +10,7 @@ export interface Location {
   landmark: string;
   address?: string;
   image?: string;
+  entryNodeIdx?: number;
 }
 
 export interface CampusEntry {
@@ -21,12 +22,13 @@ export interface CampusEntry {
   type: LocationType;
   description: string;
   landmark: string;
+  entryNodeIdx?: number;
 }
 
 export interface Maneuver {
   instruction: string;
   distance: number;
-  type: 'straight' | 'left' | 'right' | 'destination';
+  type: 'straight' | 'left' | 'right' | 'slight-left' | 'slight-right' | 'destination';
   coordinates: [number, number];
 }
 

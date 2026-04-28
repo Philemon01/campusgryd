@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Navigation2, MapPin, ArrowRight, Clock } from 'lucide-react';
+import { Navigation2, MapPin, ArrowRight, Clock, ChevronRight } from 'lucide-react';
 import { Maneuver } from '../../types';
 
 interface NavigationHUDProps {
@@ -29,37 +29,37 @@ export const NavigationHUD: React.FC<NavigationHUDProps> = ({
           exit={{ y: -100, opacity: 0 }}
           className="absolute top-24 left-4 right-4 z-[30] bg-[#4285F4] text-white p-5 rounded-2xl shadow-2xl flex items-center gap-5 border border-white/20"
         >
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner relative overflow-hidden">
             {maneuvers[currentManeuverIndex].type === 'left' && <Navigation2 className="-rotate-90 text-white fill-white" size={28} />}
+            {maneuvers[currentManeuverIndex].type === 'slight-left' && <Navigation2 className="-rotate-45 text-white fill-white" size={28} />}
             {maneuvers[currentManeuverIndex].type === 'right' && <Navigation2 className="rotate-90 text-white fill-white" size={28} />}
+            {maneuvers[currentManeuverIndex].type === 'slight-right' && <Navigation2 className="rotate-45 text-white fill-white" size={28} />}
             {maneuvers[currentManeuverIndex].type === 'straight' && <Navigation2 className="text-white fill-white" size={28} />}
             {maneuvers[currentManeuverIndex].type === 'destination' && <MapPin className="text-white fill-white" size={28} />}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center flex-wrap gap-2 mb-1">
-              <p className="text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded-full">
-                {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Step ${currentManeuverIndex + 1} of ${maneuvers.length}`}
-              </p>
+            <div className="flex items-center flex-wrap gap-2 mb-1.5">
+              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 rounded-full border border-white/10">
+                <p className="text-[9px] font-black text-white/90 uppercase tracking-widest ">
+                  {maneuvers[currentManeuverIndex].type === 'destination' ? 'Arrived' : `Instruction`}
+                </p>
+              </span>
               {maneuvers[currentManeuverIndex].distance > 0 && (
                 <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full">
-                  <ArrowRight size={10} className="text-white" />
                   <span className="text-[10px] font-black uppercase tracking-tighter text-white">
-                    {maneuvers[currentManeuverIndex].distance}m
+                    In {maneuvers[currentManeuverIndex].distance}m
                   </span>
                 </div>
               )}
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20 rounded-full">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-black/20 rounded-full border border-white/5">
                 <Clock size={10} className="text-white/80" />
                 <span className="text-[10px] font-black uppercase tracking-tighter text-white/90">
-                  {totalRemainingDistance}m total
+                  {Math.ceil(totalRemainingDistance / 80)} min
                 </span>
               </div>
-              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/30 rounded-full border border-green-500/20">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-[8px] font-black uppercase tracking-tighter text-white/80">Live</span>
-              </div>
             </div>
-            <h4 className="text-sm md:text-base font-bold leading-tight">
+            <h4 className="text-sm md:text-xl font-bold leading-tight tracking-tight">
               {maneuvers[currentManeuverIndex].instruction}
             </h4>
           </div>

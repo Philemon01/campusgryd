@@ -195,33 +195,54 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
             </div>
 
             {plannedRoutes.length > 0 && !isNavigating && (
-              <div className="grid grid-cols-2 gap-2">
-                {plannedRoutes.map((route) => {
-                  const isSelected = selectedRouteId === route.id;
-                  return (
-                    <button
-                      key={route.id}
-                      onClick={() => setSelectedRouteId(route.id)}
-                      className={cn(
-                        "p-2 rounded-xl border transition-all text-left",
-                        isSelected 
-                          ? "border-rsu-navy bg-rsu-navy/5" 
-                          : "border-rsu-border bg-white"
-                      )}
-                    >
-                      <span className={cn(
-                        "text-[7px] font-black uppercase tracking-wider block mb-0.5",
-                        isSelected ? "text-rsu-navy" : "text-rsu-muted"
-                      )}>
-                        {route.name}
-                      </span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-rsu-navy">{route.duration} min</span>
-                        <span className="text-[9px] font-bold text-rsu-muted">{route.distance}m</span>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {plannedRoutes.map((route) => {
+                    const isSelected = selectedRouteId === route.id;
+                    return (
+                      <button
+                        key={route.id}
+                        onClick={() => setSelectedRouteId(route.id)}
+                        className={cn(
+                          "p-2 rounded-xl border transition-all text-left",
+                          isSelected 
+                            ? "border-rsu-navy bg-rsu-navy/5" 
+                            : "border-rsu-border bg-white"
+                        )}
+                      >
+                        <span className={cn(
+                          "text-[7px] font-black uppercase tracking-wider block mb-0.5",
+                          isSelected ? "text-rsu-navy" : "text-rsu-muted"
+                        )}>
+                          {route.name}
+                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black text-rsu-navy">{route.duration} min</span>
+                          <span className="text-[9px] font-bold text-rsu-muted">{route.distance}m</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Maneuvers Preview */}
+                <div className="bg-rsu-bg rounded-xl p-3 border border-rsu-border/30">
+                  <h4 className="text-[9px] font-black uppercase text-rsu-muted mb-2 tracking-widest">Route Steps</h4>
+                  <div className="space-y-3">
+                    {plannedRoutes.find(r => r.id === selectedRouteId)?.maneuvers.slice(0, 3).map((m, i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rsu-border" />
+                          {i < 2 && <div className="w-px flex-1 bg-rsu-border my-1" />}
+                        </div>
+                        <p className="text-[10px] text-rsu-text leading-tight">{m.instruction}</p>
                       </div>
-                    </button>
-                  );
-                })}
+                    ))}
+                    {plannedRoutes.find(r => r.id === selectedRouteId)!.maneuvers.length > 3 && (
+                      <p className="text-[9px] text-rsu-navy font-bold text-center">Tap Start for full directions</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -4,12 +4,13 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
   "main_gate": {
     "name": "Main Gate",
     "aliases": ["Entrance"],
-    "lat": 4.804043397564349,
-    "lng": 6.986824572086334,
+    "lat": 4.810512,
+    "lng": 6.985543,
     "address": "RSU Main Entrance",
     "type": "gate",
     "description": "Primary entry point to the university.",
-    "landmark": "Main Road"
+    "landmark": "Main Road",
+    "entryNodeIdx": 0
   },
   "main_gate_park": {
     "name": "Rsu Main gate Park",
@@ -39,7 +40,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Campus Road",
     "type": "facility",
     "description": "University Protestant Chaplaincy.",
-    "landmark": "Church Area"
+    "landmark": "Church Area",
+    "entryNodeIdx": 55
   },
   "entrepreneur_centre": {
     "name": "Risi water/Entrepreneur centre",
@@ -79,7 +81,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Academic Axis",
     "type": "college",
     "description": "Administrative center for postgraduate studies.",
-    "landmark": "Central Area"
+    "landmark": "Central Area",
+    "entryNodeIdx": 16
   },
   "convocation_arena": {
     "name": "Convocation Arena",
@@ -89,7 +92,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Main Arena",
     "type": "facility",
     "description": "Venue for university ceremonies and events.",
-    "landmark": "Near PG School"
+    "landmark": "Near PG School",
+    "entryNodeIdx": 12
   },
   "university_library": {
     "name": "Rivers State University Library",
@@ -99,7 +103,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Library Axis",
     "type": "library",
     "description": "Master resource center for research and learning.",
-    "landmark": "Science Cluster"
+    "landmark": "Science Cluster",
+    "entryNodeIdx": 56
   },
   "lane_f": {
     "name": "Lane F",
@@ -139,7 +144,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Management Axis",
     "type": "faculty",
     "description": "Academic center for business and management studies.",
-    "landmark": "Near Senate Building"
+    "landmark": "Near Senate Building",
+    "entryNodeIdx": 28
   },
   "opolo_hub": {
     "name": "Opolo Hub ground fall",
@@ -179,7 +185,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Science Cluster, behind maritime science",
     "type": "faculty",
     "description": "Academic home for Physics programs.",
-    "landmark": "Faculty of Science Cluster"
+    "landmark": "Faculty of Science Cluster",
+    "entryNodeIdx": 25
   },
   "physics_lab": {
     "name": "Physics Lab - PL1",
@@ -199,7 +206,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Science Cluster",
     "type": "faculty",
     "description": "Academic home for Chemistry programs.",
-    "landmark": "Faculty of Science Cluster"
+    "landmark": "Faculty of Science Cluster",
+    "entryNodeIdx": 25
   },
   "chemistry_lab": {
     "name": "chemistry lab",
@@ -219,7 +227,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Science Cluster",
     "type": "faculty",
     "description": "Biological sciences department.",
-    "landmark": "Near Chemistry"
+    "landmark": "Near Chemistry",
+    "entryNodeIdx": 25
   },
   "microbiology_lab": {
     "name": "micro biology lab",
@@ -239,7 +248,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Agric Axis",
     "type": "faculty",
     "description": "Academic center for food processing and technology.",
-    "landmark": "Agric Cluster"
+    "landmark": "Agric Cluster",
+    "entryNodeIdx": 5
   },
   "plant_science": {
     "name": "Plant Science and Biotechnology - PSB",
@@ -259,7 +269,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Campus Center",
     "type": "faculty",
     "description": "Houses sociology, political science, and related fields.",
-    "landmark": "Near Management Sciences"
+    "landmark": "Near Management Sciences",
+    "entryNodeIdx": 11
   },
   "microbiology_dept_pt2": {
     "name": "micro biology dept pt2",
@@ -299,7 +310,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Medical Axis",
     "type": "college",
     "description": "Premier medical training facility.",
-    "landmark": "Near Hostel Area"
+    "landmark": "Near Hostel Area",
+    "entryNodeIdx": 33
   },
   "road_f": {
     "name": "Road F",
@@ -369,7 +381,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Engineering Axis",
     "type": "faculty",
     "description": "Main administrative block for Engineering.",
-    "landmark": "Near ICT"
+    "landmark": "Near ICT",
+    "entryNodeIdx": 53
   },
   "nddc_hostel": {
     "name": "NDDC hostel",
@@ -479,7 +492,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Eagle Island Entrance",
     "type": "gate",
     "description": "The secondary gate of the university.",
-    "landmark": "Near CCE"
+    "landmark": "Near CCE",
+    "entryNodeIdx": 57
   },
   "back_gate_park": {
     "name": "Rsu back gate park",
@@ -560,5 +574,127 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "type": "facility",
     "description": "Access road to various student centers.",
     "landmark": "Near Shopping Complex"
+  },
+  "lane_a": {
+    "name": "Lane A",
+    "aliases": ["Road A"],
+    "lat": 4.796812,
+    "lng": 6.982843,
+    "address": "Staff Housing Area",
+    "type": "facility",
+    "description": "Residential lane A.",
+    "landmark": "Works Department Area"
+  },
+  "lane_b": {
+    "name": "Lane B",
+    "aliases": ["Road B"],
+    "lat": 4.796512,
+    "lng": 6.982412,
+    "address": "Staff Housing Area",
+    "type": "facility",
+    "description": "Residential lane B.",
+    "landmark": "Near PG School"
+  },
+  "lane_c": {
+    "name": "Lane C",
+    "aliases": ["Road C"],
+    "lat": 4.796212,
+    "lng": 6.981912,
+    "address": "Staff Housing Area",
+    "type": "facility",
+    "description": "Residential lane C.",
+    "landmark": "Medical College Area"
+  },
+  "lane_d": {
+    "name": "Lane D",
+    "aliases": ["Road D"],
+    "lat": 4.795912,
+    "lng": 6.981412,
+    "address": "Staff Housing Area",
+    "type": "facility",
+    "description": "Residential lane D.",
+    "landmark": "Agric Area"
+  },
+  "lane_e": {
+    "name": "Lane E",
+    "aliases": ["Road E"],
+    "lat": 4.795612,
+    "lng": 6.980912,
+    "address": "Staff Housing Area",
+    "type": "facility",
+    "description": "Residential lane E.",
+    "landmark": "Engineering Axis"
+  },
+  "road_a": {
+    "name": "Road A",
+    "aliases": ["Main Academic Road A"],
+    "lat": 4.797212,
+    "lng": 6.980123,
+    "address": "Academic Area",
+    "type": "facility",
+    "description": "Primary academic connector road A.",
+    "landmark": "Management Sciences"
+  },
+  "road_b": {
+    "name": "Road B",
+    "aliases": ["Secondary Road B"],
+    "lat": 4.796212,
+    "lng": 6.977843,
+    "address": "Agric Axis",
+    "type": "facility",
+    "description": "Primary academic connector road B.",
+    "landmark": "Agric Faculty"
+  },
+  "road_c": {
+    "name": "Road C",
+    "aliases": ["Hostel Road C"],
+    "lat": 4.794812,
+    "lng": 6.976543,
+    "address": "Residential Axis",
+    "type": "facility",
+    "description": "Connector road near Hostels.",
+    "landmark": "Back Gate Area"
+  },
+  "road_e": {
+    "name": "Road E",
+    "aliases": ["Old Senate Road E"],
+    "lat": 4.800512,
+    "lng": 6.983543,
+    "address": "Old Campus Axis",
+    "type": "facility",
+    "description": "Road connecting old Senate buildings.",
+    "landmark": "Old Convocation Ground"
+  },
+  "faculty_law": {
+    "name": "Faculty of Law",
+    "aliases": ["Law Building", "RSU Law"],
+    "lat": 4.796412,
+    "lng": 6.984124,
+    "address": "Law Axis",
+    "type": "faculty",
+    "description": "Academic center for legal studies.",
+    "landmark": "Near Filing Station",
+    "entryNodeIdx": 51
+  },
+  "faculty_agriculture": {
+    "name": "Faculty of Agriculture",
+    "aliases": ["Agric", "Agric Faculty"],
+    "lat": 4.796123,
+    "lng": 6.980541,
+    "address": "Agric Axis",
+    "type": "faculty",
+    "description": "Academic center for Agricultural activities.",
+    "landmark": "Agric Cluster",
+    "entryNodeIdx": 52
+  },
+  "road_g": {
+    "name": "Road G",
+    "aliases": ["Students Link Road G"],
+    "lat": 4.793123,
+    "lng": 6.981123,
+    "address": "Hostel Axis",
+    "type": "facility",
+    "description": "Critical connector road between hostels and academic area.",
+    "landmark": "Near Student Affairs"
   }
 };

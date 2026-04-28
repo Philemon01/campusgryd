@@ -59,10 +59,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             searchMode === 'start' ? "border-blue-400 ring-2 ring-blue-400/10" : "border-rsu-border"
           )}>
             <div className="flex items-center px-4 py-2.5">
-              <Navigation2 className="text-blue-500 mr-3" size={18} />
+              <div className="mr-3 flex flex-col items-center">
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-500 bg-white" />
+              </div>
               <input 
                 type="text"
-                placeholder="From: Current Location"
+                placeholder="From: Your Location"
                 className="flex-1 outline-none bg-transparent text-[11px] font-bold text-rsu-text placeholder:text-rsu-muted uppercase tracking-tighter"
                 value={searchMode === 'start' ? searchQuery : (startLocation?.officialName || (userLocation ? "My GPS Location" : ""))}
                 onFocus={() => {
@@ -89,7 +91,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             searchMode === 'destination' ? "border-rsu-green ring-2 ring-rsu-green/10" : "border-rsu-border"
           )}>
             <div className="flex items-center px-4 py-2.5">
-              <Search className="text-rsu-green mr-3" size={18} />
+              <div className="mr-3 flex flex-col items-center">
+                <div className="w-2.5 h-2.5 bg-rsu-green" />
+              </div>
               <input 
                 type="text"
                 placeholder="To: Search destination..."

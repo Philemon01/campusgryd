@@ -7,13 +7,15 @@ interface FloatingActionsProps {
   setIsSatelliteView: (s: boolean) => void;
   setNotification: (n: { message: string, type: 'info' | 'error' | 'success' }) => void;
   handleLocateMe: () => void;
+  isFollowingUser: boolean;
 }
 
 export const FloatingActions: React.FC<FloatingActionsProps> = ({
   isSatelliteView,
   setIsSatelliteView,
   setNotification,
-  handleLocateMe
+  handleLocateMe,
+  isFollowingUser
 }) => {
   return (
     <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
@@ -38,10 +40,15 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
 
       <button 
         onClick={handleLocateMe}
-        className="p-3 bg-rsu-card rounded-full shadow-lg text-rsu-green hover:bg-rsu-bg transition-colors border border-rsu-border"
+        className={cn(
+          "p-3 rounded-full shadow-lg transition-all border",
+          isFollowingUser 
+            ? "bg-rsu-navy text-white border-rsu-navy ring-4 ring-rsu-navy/10" 
+            : "bg-rsu-card text-rsu-green border-rsu-border hover:bg-rsu-bg"
+        )}
         title="Locate Me"
       >
-        <LocateFixed size={24} />
+        <LocateFixed size={24} className={cn(isFollowingUser && "animate-pulse")} />
       </button>
     </div>
   );

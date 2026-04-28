@@ -9,5 +9,6 @@ export const locations: Location[] = Object.entries(CAMPUS_REGISTRY).map(([id, d
   type: data.type,
   description: data.description,
   landmark: data.landmark,
-  address: data.address
+  address: data.address,
+  entryNodeIdx: data.entryNodeIdx
 }));
