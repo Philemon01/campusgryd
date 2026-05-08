@@ -131,18 +131,53 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
       )}
 
       {mapFeatures?.features?.map((feature: any, idx: number) => {
+        const strokeColor = feature.properties.stroke || (isSatelliteView ? '#FFFFFF' : '#000000');
+        const weight = 3;
+        const opacity = 0.8;
+
         if (feature.geometry.type === 'LineString') {
           const positions = feature.geometry.coordinates.map((coord: any) => [coord[1], coord[0]]);
           return (
             <Polyline 
               key={`feature-${idx}`}
               positions={positions}
-              color={feature.properties.stroke || '#000000'}
-              weight={2}
-              opacity={0.6}
+              color={strokeColor}
+              weight={weight}
+              opacity={opacity}
             />
           );
         }
+
+        if (feature.geometry.type === 'MultiLineString') {
+          return feature.geometry.coordinates.map((line: any, lIdx: number) => {
+            const positions = line.map((coord: any) => [coord[1], coord[0]]);
+            return (
+              <Polyline 
+                key={`feature-${idx}-line-${lIdx}`}
+                positions={positions}
+                color={strokeColor}
+                weight={weight}
+                opacity={opacity}
+              />
+            );
+          });
+        }
+
+        if (feature.geometry.type === 'Polygon') {
+          const positions = feature.geometry.coordinates.map((ring: any) => 
+            ring.map((coord: any) => [coord[1], coord[0]])
+          );
+          return (
+            <Polyline 
+              key={`feature-${idx}`}
+              positions={positions}
+              color={strokeColor}
+              weight={weight}
+              opacity={opacity}
+            />
+          );
+        }
+
         return null;
       })}
 

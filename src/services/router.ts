@@ -39,29 +39,61 @@ export class CustomCampusRouter {
   }
 
   private buildGraph(features: FeatureCollection) {
-    features.features.forEach((feature) => {
-      if (feature.geometry.type === 'LineString') {
-        const coords = (feature.geometry as LineString).coordinates;
-        const featureId = (feature.id as string || '').toLowerCase();
-        
-        let type: Edge['type'] = 'path';
-        if (featureId.includes('road')) type = 'road';
-        if (featureId.includes('link') || featureId.includes('intersection')) type = 'link';
+    const SNAP_DISTANCE = 15; // Increased to 15m to better connect disjoint campus paths
 
+    const getSnappedNodeId = (lat: number, lng: number): string => {
+      for (const node of this.nodes.values()) {
+        if (this.getDistance(lat, lng, node.lat, node.lng) < SNAP_DISTANCE) {
+          return node.id;
+        }
+      }
+      const id = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      this.nodes.set(id, { id, lat, lng });
+      return id;
+    };
+
+    features.features.forEach((feature) => {
+      const featureId = (feature.id as string || '').toLowerCase();
+      const stroke = (feature.properties?.stroke as string || '').toLowerCase();
+      
+      let type: Edge['type'] = 'path';
+      // Identify roads strictly by their purpose/stroke
+      const isRoad = featureId.includes('road') || 
+                     stroke === '#000084' || 
+                     stroke === '#000000' || 
+                     stroke === '#461f00'; // Brown
+      
+      const isLink = featureId.includes('link') || 
+                     featureId.includes('intersection') || 
+                     featureId.includes('route') || 
+                     featureId.includes('path') ||
+                     stroke === '#396100'; // Green
+
+      if (isRoad) type = 'road';
+      if (isLink) type = 'link';
+
+      const processCoords = (coords: any[]) => {
         for (let i = 0; i < coords.length - 1; i++) {
           const p1 = coords[i];
           const p2 = coords[i+1];
           
-          const id1 = `${p1[1].toFixed(6)},${p1[0].toFixed(6)}`;
-          const id2 = `${p2[1].toFixed(6)},${p2[0].toFixed(6)}`;
+          const id1 = getSnappedNodeId(p1[1], p1[0]);
+          const id2 = getSnappedNodeId(p2[1], p2[0]);
 
-          if (!this.nodes.has(id1)) this.nodes.set(id1, { id: id1, lat: p1[1], lng: p1[0] });
-          if (!this.nodes.has(id2)) this.nodes.set(id2, { id: id2, lat: p2[1], lng: p2[0] });
+          if (id1 === id2) continue; // Skip self-loops after snapping
 
           const dist = this.getDistance(p1[1], p1[0], p2[1], p2[0]);
           this.edges.push({ from: id1, to: id2, distance: dist, type });
           this.edges.push({ from: id2, to: id1, distance: dist, type });
         }
+      };
+
+      if (feature.geometry.type === 'LineString') {
+        processCoords(feature.geometry.coordinates);
+      } else if (feature.geometry.type === 'MultiLineString') {
+        feature.geometry.coordinates.forEach((line: any) => processCoords(line));
+      } else if (feature.geometry.type === 'Polygon') {
+        feature.geometry.coordinates.forEach((ring: any) => processCoords(ring));
       }
     });
   }
@@ -79,10 +111,23 @@ export class CustomCampusRouter {
     return edge.distance;
   }
 
+  private getClosestPointOnSegment(p: [number, number], a: [number, number], b: [number, number]): [number, number] {
+    const [latP, lngP] = p;
+    const [latA, lngA] = a;
+    const [latB, lngB] = b;
+
+    const l2 = Math.pow(latA - latB, 2) + Math.pow(lngA - lngB, 2);
+    if (l2 === 0) return a;
+    let t = ((latP - latA) * (latB - latA) + (lngP - lngA) * (lngB - lngA)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return [latA + t * (latB - latA), lngA + t * (lngB - lngA)];
+  }
+
   private findNearestNode(lat: number, lng: number): string {
     let nearestId = '';
     let minDist = Infinity;
 
+    // Check all nodes (vertices) first
     this.nodes.forEach((node) => {
       const dist = this.getDistance(lat, lng, node.lat, node.lng);
       if (dist < minDist) {
@@ -90,6 +135,23 @@ export class CustomCampusRouter {
         nearestId = node.id;
       }
     });
+
+    // Check edges to see if we're closer to a point in the middle of a segment
+    for (const edge of this.edges) {
+      const from = this.nodes.get(edge.from)!;
+      const to = this.nodes.get(edge.to)!;
+      
+      const p = this.getClosestPointOnSegment([lat, lng], [from.lat, from.lng], [to.lat, to.lng]);
+      const dist = this.getDistance(lat, lng, p[0], p[1]);
+      
+      if (dist < minDist) {
+        minDist = dist;
+        // Snap to the closer vertex of this edge to maintain connectivity
+        const dFrom = this.getDistance(p[0], p[1], from.lat, from.lng);
+        const dTo = this.getDistance(p[0], p[1], to.lat, to.lng);
+        nearestId = dFrom < dTo ? edge.from : edge.to;
+      }
+    }
 
     return nearestId;
   }
