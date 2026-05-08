@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Bookmark, Trash2, History, GraduationCap } from 'lucide-react';
+import { X, Bookmark, Trash2, History, GraduationCap, Calendar } from 'lucide-react';
 import { Location } from '../../types';
 
 interface MenuDrawerProps {
@@ -11,6 +11,7 @@ interface MenuDrawerProps {
   handleLocationSelect: (loc: Location) => void;
   toggleSaveLocation: (id: string) => void;
   getCategoryIcon: (type: string) => React.ReactNode;
+  toggleEvents: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -20,7 +21,8 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   setIsMenuOpen,
   handleLocationSelect,
   toggleSaveLocation,
-  getCategoryIcon
+  getCategoryIcon,
+  toggleEvents
 }) => {
   return (
     <AnimatePresence>
@@ -54,6 +56,26 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
+              {/* Event Schedule Quick Access */}
+              <button
+                onClick={() => {
+                  toggleEvents();
+                  setIsMenuOpen(false);
+                }}
+                className="w-full flex items-center p-4 bg-rsu-navy text-white rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-95 group mb-6 overflow-hidden relative"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                  <Calendar size={64} strokeWidth={3} />
+                </div>
+                <div className="p-3 bg-white/20 rounded-xl mr-4">
+                  <Calendar size={24} />
+                </div>
+                <div className="text-left relative z-10">
+                  <div className="font-black italic text-sm tracking-tight">CAMPUS SCHEDULE</div>
+                  <div className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Events & News</div>
+                </div>
+              </button>
+
               {/* Saved Locations Section */}
               <div>
                 <div className="flex items-center gap-2 mb-4 px-2">

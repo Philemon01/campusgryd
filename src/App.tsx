@@ -6,7 +6,9 @@ import {
   X, 
   Info
 } from 'lucide-react';
+import { AIChat } from './components/UI/AIChat';
 import { locations } from './data/locations';
+import mapFeaturesData from './data/rsu-map-features.json';
 import { Location, Maneuver, RouteOption } from './types';
 import { cn } from './lib/utils';
 import { RSU_CENTER, DEFAULT_ZOOM } from './constants';
@@ -20,6 +22,9 @@ import { InfoPanel } from './components/Navigation/InfoPanel';
 import { Header } from './components/UI/Header';
 import { MenuDrawer } from './components/UI/MenuDrawer';
 import { FloatingActions } from './components/UI/FloatingActions';
+import { EventsPanel } from './components/UI/EventsPanel';
+import { CustomCampusRouter, RoutingMode } from './services/router';
+import { FeatureCollection } from 'geojson';
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
 
@@ -53,6 +58,7 @@ export default function App() {
     return [];
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEventsPanelOpen, setIsEventsPanelOpen] = useState(false);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isListening, setIsListening] = useState(false);
@@ -61,7 +67,7 @@ export default function App() {
   const [isVoiceAssistEnabled, setIsVoiceAssistEnabled] = useState(true);
   const [availableRoutes, setAvailableRoutes] = useState<RouteOption[]>([]);
   const [plannedRoutes, setPlannedRoutes] = useState<RouteOption[]>([]);
-  const [selectedRouteId, setSelectedRouteId] = useState<'fastest' | 'shortest'>('fastest');
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('shortest');
   const [recentLocationIds, setRecentLocationIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const recent = localStorage.getItem('recent_locations');
@@ -69,6 +75,10 @@ export default function App() {
     }
     return [];
   });
+
+  const campusRouter = useMemo(() => {
+    return new CustomCampusRouter(mapFeaturesData as FeatureCollection);
+  }, []);
 
   useEffect(() => {
     if (notification) {
@@ -90,9 +100,7 @@ export default function App() {
         start, 
         end, 
         startName, 
-        endName, 
-        startLocation?.entryNodeIdx, 
-        selectedLocation.entryNodeIdx
+        endName
       );
       setPlannedRoutes(routes);
     } else {
@@ -303,18 +311,28 @@ export default function App() {
           start, 
           end, 
           startName, 
-          endName, 
-          loc.entryNodeIdx, 
-          selectedLocation.entryNodeIdx
+          endName
         );
         
         setAvailableRoutes(routes);
-        setSelectedRouteId(routes[0].id);
-        setNavigationPath(routes[0].path);
-        setManeuvers(routes[0].maneuvers);
+        if (routes.length > 0) {
+          setSelectedRouteId(routes[0].id);
+          setNavigationPath(routes[0].path);
+          setManeuvers(routes[0].maneuvers);
+          setIsPanelExpanded(true);
+          setMapView({ center: [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2], zoom: 16 });
+        }
       }
     }
     setIsSearchFocused(false);
+  };
+
+  const handleEventNavigation = (locationId: string) => {
+    const loc = locations.find(l => l.id === locationId);
+    if (loc) {
+      handleLocationSelect(loc);
+      setIsEventsPanelOpen(false);
+    }
   };
 
   const handleGetDirections = () => {
@@ -364,137 +382,6 @@ export default function App() {
     return Math.ceil(d / 80);
   };
 
-  // Defining Main Campus Road Network (Graph) based on actual campus layout
-  const ROAD_NODES: [number, number][] = [
-    [4.810512, 6.985543], // 0: Main Gate / Entrance
-    [4.808512, 6.985543], // 1: Main Entrance Road (North)
-    [4.806512, 6.985124], // 2: Main Entrance Road (Middle)
-    [4.804123, 6.985124], // 3: Post Graduate / Admin Roundabout
-    [4.801512, 6.985124], // 4: Senate Road Junction
-    [4.798512, 6.985124], // 5: Library / Science Junction
-    [4.796512, 6.986543], // 6: South-East Outer Link
-    [4.794512, 6.987543], // 7: Engineering Axis Outer Road
-    [4.804123, 6.983124], // 8: Secondary Roundabout (Medical/Staff Axis)
-    [4.806512, 6.981124], // 9: Health Centre Junction
-    [4.808512, 6.979124], // 10: North-West Perimeter Road
-    [4.802123, 6.981124], // 11: Management Science Link
-    [4.800123, 6.983124], // 12: Admin / Works Connection
-    [4.798123, 6.981124], // 13: Library / Environmental Axis
-    [4.804123, 6.987124], // 14: Convocation Area Road
-    [4.805512, 6.985124], // 15: Primary Internal Link
-    [4.800075, 6.980743], // 16: PG School Junction access
-    [4.801512, 6.982124], // 17: Estate Gate Road access
-    [4.805512, 6.980543], // 18: Chapel Access Junction
-    [4.797512, 6.984124], // 19: Filing Station Junction
-    [4.797212, 6.984124], // 20: Works Department Access
-    [4.807512, 6.978124], // 21: Perimeter West
-    [4.809512, 6.977124], // 22: Back Gate Road Junction
-    [4.803123, 6.979124], // 23: Environmental Link
-    [4.804123, 6.989124], // 24: Engineering Workshop Link
-    [4.799512, 6.982124], // 25: Science Faculty Entry
-    [4.800512, 6.979124], // 26: Library Branch Link
-    [4.799512, 6.978124], // 27: Back Campus Access
-    [4.802512, 6.984124], // 28: Management Faculty Entry
-    [4.798512, 6.983543], // 29: ICT Centre Entry
-    [4.797912, 6.982412], // 30: Health Centre Link
-    [4.805123, 6.987124], // 31: Chapel Perimeter
-    [4.807123, 6.987124], // 32: North Staff Quarters Road
-    [4.806123, 6.982543], // 33: Medical Science Link
-    [4.809123, 6.978543], // 34: Back Community Gate Link
-    [4.792812, 6.982843], // 35: Faculty of Humanities Entry
-    [4.803123, 6.982124], // 36: Old Convocation Access
-    [4.802812, 6.985124], // 37: Chapel Front Road
-    [4.796812, 6.982843], // 38: Lane A Entry
-    [4.796512, 6.982412], // 39: Lane B Entry
-    [4.796212, 6.981912], // 40: Lane C Entry
-    [4.795912, 6.981412], // 41: Lane D Entry
-    [4.795612, 6.980912], // 42: Lane E Entry
-    [4.798512, 6.983124], // 43: Estate Gate / Power House Lane
-    [4.797212, 6.980123], // 44: Road A Junction
-    [4.796212, 6.977843], // 45: Road B / Agric Axis
-    [4.794812, 6.976543], // 46: Road C / Hostel Backwards
-    [4.793212, 6.978124], // 47: Road D / Engineering Link
-    [4.800512, 6.983543], // 48: Road E / Old Senate Area
-    [4.798123, 6.984123], // 49: Road F / Medical Sciences
-    [4.793123, 6.981123], // 50: Road G / Student Affairs Link
-    [4.796412, 6.984124], // 51: Faculty of Law Entry
-    [4.796123, 6.980541], // 52: Faculty of Agriculture Entry
-    [4.794212, 6.978543], // 53: Engineering Faculty Entry
-    [4.793812, 6.982123], // 54: Student Affairs Entry
-    [4.803512, 6.986123], // 55: Chapel of Redemption Entry
-    [4.801512, 6.978124], // 56: Library Inner Entry
-    [4.808123, 6.980123], // 57: Back Gate Inner Road
-    [4.806123, 6.985543], // 58: Main Road Hub (Middle)
-    [4.796512, 6.982543], // 59: South-West Arterial Road 1
-    [4.803512, 6.980543], // 60: North-West Arterial Road 1
-  ];
-
-  const ROAD_EDGES: { [key: number]: number[] } = {
-    0: [1],
-    1: [0, 2, 14, 15, 58],
-    2: [1, 3, 15, 30, 58],
-    3: [2, 4, 14, 15, 16, 28, 30, 31, 37, 60],
-    4: [3, 5, 25, 28, 29, 44, 48, 60],
-    5: [4, 6, 29, 40, 41, 44, 45, 52],
-    6: [5, 7, 14, 45, 46, 53, 59],
-    7: [6, 46, 47],
-    8: [11, 12, 16, 21, 28, 33, 43, 47, 54, 60],
-    9: [18, 21, 33, 57],
-    10: [18, 21, 22, 34, 50, 57],
-    11: [8, 17, 21, 23, 26, 40, 50, 52],
-    12: [8, 13, 29, 36, 48],
-    13: [12, 17, 25, 49, 56],
-    14: [1, 3, 6, 24, 31, 38, 51, 55],
-    15: [1, 2, 3, 33, 43, 48, 58],
-    16: [3, 8],
-    17: [11, 13, 25, 39],
-    18: [9, 10, 21, 35],
-    19: [14, 20, 38, 49, 51, 59],
-    20: [19, 38],
-    21: [8, 9, 10, 11, 18],
-    22: [10, 35],
-    23: [11, 26, 27],
-    24: [14],
-    25: [4, 13, 17],
-    26: [11, 23, 27],
-    27: [23, 26],
-    28: [3, 4, 8],
-    29: [4, 5, 12, 43],
-    30: [2, 3, 31, 32],
-    31: [3, 14, 30, 32],
-    32: [30, 31],
-    33: [8, 9, 15, 47],
-    34: [10],
-    35: [18, 22],
-    36: [12],
-    37: [3, 55],
-    38: [14, 19, 20, 39],
-    39: [17, 38, 40],
-    40: [5, 11, 39, 41],
-    41: [4, 5, 40, 42],
-    42: [3, 4, 41],
-    43: [8, 15, 29],
-    44: [4, 5],
-    45: [5, 6],
-    46: [6, 7, 47],
-    47: [8, 33, 46],
-    48: [4, 12, 15],
-    49: [13, 19, 30, 59],
-    50: [10, 11],
-    51: [14, 19],
-    52: [5, 11],
-    53: [6],
-    54: [8],
-    55: [14, 37],
-    56: [13],
-    57: [9, 10],
-    58: [1, 2, 15],
-    59: [6, 19, 49],
-    60: [3, 4, 8],
-  };
-
-  const ROUNDABOUT_INDICES = [1, 2, 3, 8];
-
   const getBearing = (start: [number, number], end: [number, number]) => {
     const lat1 = start[0] * Math.PI / 180;
     const lat2 = end[0] * Math.PI / 180;
@@ -519,131 +406,25 @@ export default function App() {
     return 'straight';
   };
 
-  const findNearestRoadNode = (point: [number, number]): number => {
-    let nearestIdx = 0;
-    let minDist = getDistanceInMeters(point, ROAD_NODES[0]);
-    ROAD_NODES.forEach((node, idx) => {
-      const d = getDistanceInMeters(point, node);
-      if (d < minDist) {
-        minDist = d;
-        nearestIdx = idx;
-      }
-    });
-    return nearestIdx;
-  };
-
-  const findShortestRoadPath = (startIdx: number, endIdx: number): number[] => {
-    // Dijkstra for weighted shortest path (using physical distance)
-    const distances: { [key: number]: number } = {};
-    const previous: { [key: number]: number | null } = {};
-    const queue = new Set<number>();
-
-    ROAD_NODES.forEach((_, i) => {
-      distances[i] = Infinity;
-      previous[i] = null;
-      queue.add(i);
-    });
-
-    distances[startIdx] = 0;
-
-    while (queue.size > 0) {
-      // Get node with minimum distance
-      let currIdx = -1;
-      let minDistance = Infinity;
-      queue.forEach(idx => {
-        if (distances[idx] < minDistance) {
-          minDistance = distances[idx];
-          currIdx = idx;
-        }
-      });
-
-      if (currIdx === -1 || currIdx === endIdx) break;
-      queue.delete(currIdx);
-
-      const neighbors = ROAD_EDGES[currIdx] || [];
-      for (const neighbor of neighbors) {
-        if (!queue.has(neighbor)) continue;
-        const dist = getDistanceInMeters(ROAD_NODES[currIdx], ROAD_NODES[neighbor]);
-        const alt = distances[currIdx] + dist;
-        if (alt < distances[neighbor]) {
-          distances[neighbor] = alt;
-          previous[neighbor] = currIdx;
-        }
-      }
-    }
-
-    const path: number[] = [];
-    let curr: number | null = endIdx;
-    if (previous[curr] !== null || curr === startIdx) {
-      while (curr !== null) {
-        path.unshift(curr);
-        curr = previous[curr];
-      }
-    }
-    return path.length > 0 ? path : [startIdx, endIdx];
-  };
-
-  const generateRouteOptions = (
-    start: [number, number], 
-    end: [number, number], 
-    startName: string, 
-    endName: string,
-    startEntryIdx?: number,
-    endEntryIdx?: number
-  ): RouteOption[] => {
-    const directDist = getDistanceInMeters(start, end);
-    const startNodeIdx = startEntryIdx !== undefined && startEntryIdx >= 0 ? startEntryIdx : findNearestRoadNode(start);
-    const endNodeIdx = endEntryIdx !== undefined && endEntryIdx >= 0 ? endEntryIdx : findNearestRoadNode(end);
-    
-    // Path through road network
-    const pathIndices = findShortestRoadPath(startNodeIdx, endNodeIdx);
-    const roadWaypoints = pathIndices.map(idx => ROAD_NODES[idx]);
-    
-    // Build the path: Start -> road network nodes -> End
-    const realisticPath: [number, number][] = [start];
-    
-    roadWaypoints.forEach(wp => {
-      const last = realisticPath[realisticPath.length - 1];
-      // Only add if not effectively the same point
-      if (getDistanceInMeters(last, wp) > 0.5) {
-        realisticPath.push(wp);
-      }
-    });
-
-    // Add final destination
-    const lastPoint = realisticPath[realisticPath.length - 1];
-    if (getDistanceInMeters(lastPoint, end) > 0.5) {
-      realisticPath.push(end);
-    }
-
-    const roadDist = realisticPath.reduce((acc, curr, i) => {
-      return i === 0 ? 0 : acc + getDistanceInMeters(realisticPath[i-1], curr);
-    }, 0);
-
-    // Grouping maneuvers to avoid "point-to-point" feel
+  const generatePathManeuvers = (path: [number, number][], startName: string, endName: string): Maneuver[] => {
     const rawManeuvers: Maneuver[] = [];
-    for (let i = 0; i < realisticPath.length; i++) {
-      const coord = realisticPath[i];
-      if (i === realisticPath.length - 1) {
+    for (let i = 0; i < path.length; i++) {
+      const coord = path[i];
+      if (i === path.length - 1) {
         rawManeuvers.push({ instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: coord });
         continue;
       }
       
-      const nextCoord = realisticPath[i+1];
+      const nextCoord = path[i+1];
       const distToNext = Math.floor(getDistanceInMeters(coord, nextCoord));
       let type: Maneuver['type'] = 'straight';
       let instruction = "";
 
-      const nodeIndexAtCoord = ROAD_NODES.findIndex(n => n[0] === coord[0] && n[1] === coord[1]);
-      const isRoundabout = nodeIndexAtCoord !== -1 && ROUNDABOUT_INDICES.includes(nodeIndexAtCoord);
-
       if (i === 0) {
-        instruction = `Depart from ${startName} towards your destination property.`;
+        instruction = `Depart from ${startName} towards your destination.`;
       } else {
-        type = getManeuverType(realisticPath[i-1], coord, nextCoord);
-        if (isRoundabout) {
-          instruction = `At the roundabout, take the exit toward your destination.`;
-        } else if (type === 'straight') {
+        type = getManeuverType(path[i-1], coord, nextCoord);
+        if (type === 'straight') {
           instruction = `Proceed straight for ${distToNext}m.`;
         } else {
           const dir = type.includes('left') ? 'left' : 'right';
@@ -654,7 +435,6 @@ export default function App() {
       rawManeuvers.push({ instruction, distance: distToNext, type, coordinates: coord });
     }
 
-    // Secondary Grouping: Merge consecutive straight segments
     const groupedManeuvers: Maneuver[] = [];
     for (let i = 0; i < rawManeuvers.length; i++) {
       const m = rawManeuvers[i];
@@ -668,18 +448,50 @@ export default function App() {
         groupedManeuvers.push({ ...m });
       }
     }
+    return groupedManeuvers;
+  };
 
-    return [
-      {
-        id: 'fastest',
-        name: 'Official Campus Road',
-        duration: Math.ceil(roadDist / 90),
-        distance: Math.floor(roadDist),
-        path: realisticPath,
-        maneuvers: groupedManeuvers
-      },
-      {
+  const generateRouteOptions = (
+    start: [number, number], 
+    end: [number, number], 
+    startName: string, 
+    endName: string
+  ): RouteOption[] => {
+    const options: RouteOption[] = [];
+    
+    // 1. Shortcut Path (All paths allowed)
+    const shortcutPath = campusRouter.findRoute(start, end, 'shortest');
+    if (shortcutPath) {
+      const dist = shortcutPath.reduce((acc, curr, i) => i === 0 ? 0 : acc + getDistanceInMeters(shortcutPath[i-1], curr), 0);
+      options.push({
         id: 'shortest',
+        name: 'Quick Shortcut',
+        duration: Math.ceil(dist / 75), // slightly faster pace on paths
+        distance: Math.floor(dist),
+        path: shortcutPath,
+        maneuvers: generatePathManeuvers(shortcutPath, startName, endName)
+      });
+    }
+
+    // 2. Main Roads / Accessible (Prefers asphalt roads)
+    const accessiblePath = campusRouter.findRoute(start, end, 'accessible');
+    if (accessiblePath) {
+      const dist = accessiblePath.reduce((acc, curr, i) => i === 0 ? 0 : acc + getDistanceInMeters(accessiblePath[i-1], curr), 0);
+      options.push({
+        id: 'accessible',
+        name: 'Main Road (Accessible)',
+        duration: Math.ceil(dist / 85), // easier walking on road
+        distance: Math.floor(dist),
+        path: accessiblePath,
+        maneuvers: generatePathManeuvers(accessiblePath, startName, endName)
+      });
+    }
+
+    // 3. Keep fallback if nothing found
+    if (options.length === 0) {
+      const directDist = getDistanceInMeters(start, end);
+      options.push({
+        id: 'offroad',
         name: 'Direct Path (Off-Road)',
         duration: Math.ceil(directDist / 70),
         distance: Math.floor(directDist),
@@ -688,8 +500,10 @@ export default function App() {
           { instruction: `Head directly from ${startName} to ${endName}. Note: This path cuts across terrain.`, distance: Math.floor(directDist), type: 'straight', coordinates: start },
           { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: end }
         ]
-      }
-    ];
+      });
+    }
+
+    return options;
   };
 
   const startNavigation = () => {
@@ -703,27 +517,27 @@ export default function App() {
       start, 
       end, 
       startName, 
-      endName, 
-      startLocation?.entryNodeIdx, 
-      selectedLocation.entryNodeIdx
+      endName
     );
     
     setAvailableRoutes(routes);
-    const activeRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
-    setManeuvers(activeRoute.maneuvers);
-    setCurrentManeuverIndex(0);
-    setIsNavigating(true);
-    setNavigationPath(activeRoute.path);
-    
-    // Auto-follow user only if starting from current location
-    if (!startLocation) {
-      setIsFollowingUser(true);
-    } else {
-      setIsFollowingUser(false);
-    }
-    
-    if (isVoiceAssistEnabled) {
-      playVoiceDirections(`Routing to ${endName}. Choosing ${activeRoute.name}.`);
+    if (routes.length > 0) {
+      const activeRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
+      setManeuvers(activeRoute.maneuvers);
+      setCurrentManeuverIndex(0);
+      setIsNavigating(true);
+      setNavigationPath(activeRoute.path);
+      
+      // Auto-follow user only if starting from current location
+      if (!startLocation) {
+        setIsFollowingUser(true);
+      } else {
+        setIsFollowingUser(false);
+      }
+      
+      if (isVoiceAssistEnabled) {
+        playVoiceDirections(`Routing to ${endName}. Choosing ${activeRoute.name}.`);
+      }
     }
   };
 
@@ -750,9 +564,21 @@ export default function App() {
         startLocation={startLocation}
         userLocation={userLocation}
         navigationPath={navigationPath}
+        mapFeatures={mapFeaturesData}
         onLocationSelect={(loc) => setSelectedLocation(loc)}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}
+      />
+
+      <AIChat 
+        onLocationSelect={handleLocationSelect}
+        onRouteRequest={(dest, start) => {
+          setSelectedLocation(dest);
+          if (start) setStartLocation(start);
+          setTimeout(() => {
+            startNavigation();
+          }, 300);
+        }}
       />
 
       <Header 
@@ -801,7 +627,17 @@ export default function App() {
         setNotification={setNotification}
         handleLocateMe={handleLocateMe}
         isFollowingUser={isFollowingUser}
+        toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
       />
+
+      <AnimatePresence>
+        {isEventsPanelOpen && (
+          <EventsPanel 
+            onClose={() => setIsEventsPanelOpen(false)}
+            onNavigateTo={handleEventNavigation}
+          />
+        )}
+      </AnimatePresence>
 
       <InfoPanel 
         selectedLocation={selectedLocation}
@@ -831,6 +667,7 @@ export default function App() {
         handleLocationSelect={handleLocationSelect}
         toggleSaveLocation={toggleSaveLocation}
         getCategoryIcon={getCategoryIcon}
+        toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
       />
 
       <AnimatePresence>

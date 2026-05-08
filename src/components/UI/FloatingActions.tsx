@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, LocateFixed } from 'lucide-react';
+import { Layers, LocateFixed, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface FloatingActionsProps {
@@ -8,6 +8,7 @@ interface FloatingActionsProps {
   setNotification: (n: { message: string, type: 'info' | 'error' | 'success' }) => void;
   handleLocateMe: () => void;
   isFollowingUser: boolean;
+  toggleEvents: () => void;
 }
 
 export const FloatingActions: React.FC<FloatingActionsProps> = ({
@@ -15,10 +16,19 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
   setIsSatelliteView,
   setNotification,
   handleLocateMe,
-  isFollowingUser
+  isFollowingUser,
+  toggleEvents
 }) => {
   return (
     <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
+      <button
+        onClick={toggleEvents}
+        className="p-3 bg-white text-rsu-navy border border-rsu-border rounded-full shadow-lg hover:bg-rsu-navy/10 transition-all flex items-center justify-center"
+        title="Campus Schedule"
+      >
+        <Calendar size={24} />
+      </button>
+
       <button
         onClick={() => {
           setIsSatelliteView(!isSatelliteView);

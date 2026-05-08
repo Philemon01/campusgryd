@@ -10,7 +10,7 @@ interface InfoPanelProps {
   isNavigating: boolean;
   savedLocationIds: string[];
   plannedRoutes: RouteOption[];
-  selectedRouteId: 'fastest' | 'shortest';
+  selectedRouteId: string;
   navigationPath: [number, number][] | null;
   setIsPanelExpanded: (e: boolean) => void;
   handleGetDirections: () => void;
@@ -18,7 +18,7 @@ interface InfoPanelProps {
   endSession: () => void;
   playVoiceDirections: (t: string) => void;
   toggleSaveLocation: (id: string) => void;
-  setSelectedRouteId: (id: 'fastest' | 'shortest') => void;
+  setSelectedRouteId: (id: string) => void;
   calculateWalkingTime: (c1: [number, number], c2: [number, number]) => number;
   maneuvers: Maneuver[];
   currentManeuverIndex: number;
@@ -229,18 +229,27 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
                 <div className="bg-rsu-bg rounded-xl p-3 border border-rsu-border/30">
                   <h4 className="text-[9px] font-black uppercase text-rsu-muted mb-2 tracking-widest">Route Steps</h4>
                   <div className="space-y-3">
-                    {plannedRoutes.find(r => r.id === selectedRouteId)?.maneuvers.slice(0, 3).map((m, i) => (
-                      <div key={i} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-rsu-border" />
-                          {i < 2 && <div className="w-px flex-1 bg-rsu-border my-1" />}
-                        </div>
-                        <p className="text-[10px] text-rsu-text leading-tight">{m.instruction}</p>
-                      </div>
-                    ))}
-                    {plannedRoutes.find(r => r.id === selectedRouteId)!.maneuvers.length > 3 && (
-                      <p className="text-[9px] text-rsu-navy font-bold text-center">Tap Start for full directions</p>
-                    )}
+                    {(() => {
+                      const currentRoute = plannedRoutes.find(r => r.id === selectedRouteId);
+                      if (!currentRoute) return null;
+                      
+                      return (
+                        <>
+                          {currentRoute.maneuvers.slice(0, 3).map((m, i) => (
+                            <div key={i} className="flex gap-3">
+                              <div className="flex flex-col items-center">
+                                <div className="w-1.5 h-1.5 rounded-full bg-rsu-border" />
+                                {i < currentRoute.maneuvers.slice(0, 3).length - 1 && <div className="w-px flex-1 bg-rsu-border my-1" />}
+                              </div>
+                              <p className="text-[10px] text-rsu-text leading-tight">{m.instruction}</p>
+                            </div>
+                          ))}
+                          {currentRoute.maneuvers.length > 3 && (
+                            <p className="text-[9px] text-rsu-navy font-bold text-center">Tap Start for full directions</p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

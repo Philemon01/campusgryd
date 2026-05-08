@@ -13,6 +13,7 @@ interface CampusMapProps {
   startLocation: Location | null;
   userLocation: [number, number] | null;
   navigationPath: [number, number][] | null;
+  mapFeatures?: any;
   onLocationSelect: (loc: Location) => void;
   createCustomIcon: (type: string, isActive: boolean) => L.DivIcon;
 }
@@ -57,6 +58,7 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
   startLocation,
   userLocation,
   navigationPath,
+  mapFeatures,
   onLocationSelect,
   createCustomIcon,
   onMapMove
@@ -128,7 +130,23 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
         />
       )}
 
-      {navigationPath && (
+      {mapFeatures?.features?.map((feature: any, idx: number) => {
+        if (feature.geometry.type === 'LineString') {
+          const positions = feature.geometry.coordinates.map((coord: any) => [coord[1], coord[0]]);
+          return (
+            <Polyline 
+              key={`feature-${idx}`}
+              positions={positions}
+              color={feature.properties.stroke || '#000000'}
+              weight={2}
+              opacity={0.6}
+            />
+          );
+        }
+        return null;
+      })}
+
+      {navigationPath && navigationPath.length > 0 && (
         <>
           <Polyline 
             positions={navigationPath} 

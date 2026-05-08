@@ -33,7 +33,7 @@ export interface Maneuver {
 }
 
 export interface RouteOption {
-  id: 'fastest' | 'shortest';
+  id: string;
   name: string;
   duration: number; // in minutes
   distance: number; // in meters

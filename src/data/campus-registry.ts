@@ -4,8 +4,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
   "main_gate": {
     "name": "Main Gate",
     "aliases": ["Entrance"],
-    "lat": 4.810512,
-    "lng": 6.985543,
+    "lat": 4.8040303,
+    "lng": 6.9868141,
     "address": "RSU Main Entrance",
     "type": "gate",
     "description": "Primary entry point to the university.",
@@ -61,7 +61,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Administrative Axis",
     "type": "admin",
     "description": "Modern administrative headquarters of the university.",
-    "landmark": "University Center"
+    "landmark": "University Center",
+    "entryNodeIdx": 4
   },
   "old_senate_building": {
     "name": "Old Senate Building",
@@ -71,7 +72,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Administrative Axis",
     "type": "admin",
     "description": "The former main administrative block.",
-    "landmark": "Near New Senate"
+    "landmark": "Near New Senate",
+    "entryNodeIdx": 48
   },
   "pg_school": {
     "name": "Post Graduate School",
@@ -124,7 +126,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Environmental Axis",
     "type": "faculty",
     "description": "Academic block for environmental studies.",
-    "landmark": "Near Library"
+    "landmark": "Near Library",
+    "entryNodeIdx": 13
   },
   "estate_management_ict": {
     "name": "Estate Management Department ICT",
@@ -321,7 +324,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Campus Roadway",
     "type": "facility",
     "description": "Major through-road in the campus center.",
-    "landmark": "Medical School Area"
+    "landmark": "Medical School Area",
+    "entryNodeIdx": 33
   },
   "deeper_life": {
     "name": "Deeper Life Campus Fellowship RSU Main",
@@ -392,7 +396,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Residential Area",
     "type": "hostel",
     "description": "Hostel sponsored by NDDC.",
-    "landmark": "Hostel Zone"
+    "landmark": "Hostel Zone",
+    "entryNodeIdx": 50
   },
   "maracana_field": {
     "name": "Maracana field",
@@ -402,7 +407,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Sports Complex",
     "type": "sports",
     "description": "Primary football field for matches.",
-    "landmark": "Hostel Area"
+    "landmark": "Hostel Area",
+    "entryNodeIdx": 50
   },
   "f_g_hostel": {
     "name": "F and G hostel",
@@ -633,7 +639,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Academic Area",
     "type": "facility",
     "description": "Primary academic connector road A.",
-    "landmark": "Management Sciences"
+    "landmark": "Management Sciences",
+    "entryNodeIdx": 44
   },
   "road_b": {
     "name": "Road B",
@@ -643,7 +650,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Agric Axis",
     "type": "facility",
     "description": "Primary academic connector road B.",
-    "landmark": "Agric Faculty"
+    "landmark": "Agric Faculty",
+    "entryNodeIdx": 45
   },
   "road_c": {
     "name": "Road C",
@@ -653,7 +661,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Residential Axis",
     "type": "facility",
     "description": "Connector road near Hostels.",
-    "landmark": "Back Gate Area"
+    "landmark": "Back Gate Area",
+    "entryNodeIdx": 46
   },
   "road_e": {
     "name": "Road E",
@@ -663,7 +672,8 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Old Campus Axis",
     "type": "facility",
     "description": "Road connecting old Senate buildings.",
-    "landmark": "Old Convocation Ground"
+    "landmark": "Old Convocation Ground",
+    "entryNodeIdx": 48
   },
   "faculty_law": {
     "name": "Faculty of Law",
@@ -695,6 +705,7 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "address": "Hostel Axis",
     "type": "facility",
     "description": "Critical connector road between hostels and academic area.",
-    "landmark": "Near Student Affairs"
+    "landmark": "Near Student Affairs",
+    "entryNodeIdx": 50
   }
 };
