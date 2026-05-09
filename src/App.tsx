@@ -6,7 +6,6 @@ import {
   X, 
   Info
 } from 'lucide-react';
-import { AIChat } from './components/UI/AIChat';
 import { locations } from './data/locations';
 import mapFeaturesData from './data/rsu-map-features.json';
 import { Location, Maneuver, RouteOption } from './types';
@@ -568,17 +567,6 @@ export default function App() {
         onLocationSelect={(loc) => setSelectedLocation(loc)}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}
-      />
-
-      <AIChat 
-        onLocationSelect={handleLocationSelect}
-        onRouteRequest={(dest, start) => {
-          setSelectedLocation(dest);
-          if (start) setStartLocation(start);
-          setTimeout(() => {
-            startNavigation();
-          }, 300);
-        }}
       />
 
       <Header 
