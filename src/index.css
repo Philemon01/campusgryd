@@ -10,10 +10,12 @@
   --rsu-card: #FFFFFF;
   --rsu-border: #E5E7EB;
   --rsu-muted: #64748B;
+  --rsu-orange: #FF6B35;
 }
 
 .dark {
   --rsu-navy: #1E293B;
+  --rsu-navy-light: #334155;
   --rsu-green: #40916C;
   --rsu-white: #FFFFFF;
   --rsu-bg: #0F172A;
@@ -35,6 +37,8 @@
   --color-rsu-card: var(--rsu-card);
   --color-rsu-border: var(--rsu-border);
   --color-rsu-muted: var(--rsu-muted);
+  --color-rsu-orange: var(--rsu-orange);
+  --color-rsu-navy-light: var(--rsu-navy-light);
 }
 
 html, body, #root {

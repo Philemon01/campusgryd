@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Mic, X, Navigation2, Loader2, Volume2 } from 'lucide-react';
+import { Search, Mic, X, Navigation2, Loader2, Volume2, MessageSquare } from 'lucide-react';
 import { Location } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -25,6 +25,7 @@ interface SearchOverlayProps {
   handleGetDirections: () => void;
   setActiveCategory: (cat: any) => void;
   getCategoryIcon: (type: string) => React.ReactNode;
+  onToggleChat: () => void;
 }
 
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
@@ -47,7 +48,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   handleLocationSelect,
   handleGetDirections,
   setActiveCategory,
-  getCategoryIcon
+  getCategoryIcon,
+  onToggleChat
 }) => {
   return (
     <div className="absolute top-20 left-0 right-0 px-4 z-10 flex flex-col items-center">
@@ -91,9 +93,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             searchMode === 'destination' ? "border-rsu-green ring-2 ring-rsu-green/10" : "border-rsu-border"
           )}>
             <div className="flex items-center px-4 py-2.5">
-              <div className="mr-3 flex flex-col items-center">
-                <div className="w-2.5 h-2.5 bg-rsu-green" />
-              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onToggleChat(); }}
+                className="mr-3 p-1.5 bg-rsu-navy text-white rounded-lg hover:bg-rsu-green transition-colors relative group"
+                title="Open AI Assistant"
+              >
+                <MessageSquare size={16} className="group-hover:scale-110 transition-transform" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rsu-orange rounded-full border border-white" />
+              </button>
               <input 
                 type="text"
                 placeholder="To: Search destination..."

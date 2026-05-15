@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Location } from '../../types';
 import { cn } from '../../lib/utils';
@@ -130,21 +130,88 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
         />
       )}
 
-      {mapFeatures?.features?.map((feature: any, idx: number) => {
+      {/* Base Layer for Polygons */}
+      {mapFeatures?.features?.filter((f: any) => f.geometry.type.includes('Polygon')).map((feature: any, idx: number) => {
         const strokeColor = feature.properties.stroke || (isSatelliteView ? '#FFFFFF' : '#000000');
-        const weight = 3;
-        const opacity = 0.8;
+        
+        if (feature.geometry.type === 'Polygon') {
+          const positions = feature.geometry.coordinates.map((ring: any) => 
+            ring.map((coord: any) => [coord[1], coord[0]])
+          );
+          return (
+            <Polygon 
+              key={`feature-poly-${idx}`}
+              positions={positions}
+              pathOptions={{
+                color: strokeColor,
+                weight: 2,
+                opacity: 0.6,
+                fillColor: strokeColor,
+                fillOpacity: 0.2
+              }}
+            />
+          );
+        }
 
+        if (feature.geometry.type === 'MultiPolygon') {
+          return feature.geometry.coordinates.map((polygon: any, pIdx: number) => {
+            const positions = polygon.map((ring: any) => 
+              ring.map((coord: any) => [coord[1], coord[0]])
+            );
+            return (
+              <Polygon 
+                key={`feature-multipoly-${idx}-${pIdx}`}
+                positions={positions}
+                pathOptions={{
+                  color: strokeColor,
+                  weight: 2,
+                  opacity: 0.6,
+                  fillColor: strokeColor,
+                  fillOpacity: 0.2
+                }}
+              />
+            );
+          });
+        }
+        return null;
+      })}
+
+      {/* Top Layer for Road Lines & Paths */}
+      {mapFeatures?.features?.filter((f: any) => f.geometry.type.includes('LineString')).map((feature: any, idx: number) => {
+        const strokeColor = feature.properties.stroke || (isSatelliteView ? '#FFFFFF' : '#000000');
+        const lowerStroke = strokeColor.toLowerCase();
+        
+        // Define "blue" colors from the GeoJSON as roads/routes
+        const isBlue = lowerStroke === '#000084' || 
+                       lowerStroke === '#000066' || 
+                       lowerStroke === '#007784' ||
+                       lowerStroke === '#0000ff';
+
+        const isRoad = isBlue || 
+                       feature.id?.toLowerCase().includes('road') || 
+                       feature.id?.toLowerCase().includes('route');
+        
         if (feature.geometry.type === 'LineString') {
           const positions = feature.geometry.coordinates.map((coord: any) => [coord[1], coord[0]]);
           return (
-            <Polyline 
-              key={`feature-${idx}`}
-              positions={positions}
-              color={strokeColor}
-              weight={weight}
-              opacity={opacity}
-            />
+            <React.Fragment key={`feature-line-group-${idx}`}>
+              {/* Casing / Glow for better visibility - mimicking the bold look from the image */}
+              <Polyline 
+                positions={positions}
+                color={isRoad ? (isSatelliteView ? "#000" : "#FFF") : "transparent"}
+                weight={isRoad ? 14 : 0}
+                opacity={0.3}
+              />
+              <Polyline 
+                positions={positions}
+                color={strokeColor}
+                weight={isRoad ? 8 : 2}
+                opacity={0.9}
+                dashArray={feature.id?.toLowerCase().includes('path') ? "5, 5" : undefined}
+                lineCap="round"
+                lineJoin="round"
+              />
+            </React.Fragment>
           );
         }
 
@@ -153,29 +220,14 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
             const positions = line.map((coord: any) => [coord[1], coord[0]]);
             return (
               <Polyline 
-                key={`feature-${idx}-line-${lIdx}`}
+                key={`feature-multiline-${idx}-${lIdx}`}
                 positions={positions}
                 color={strokeColor}
-                weight={weight}
-                opacity={opacity}
+                weight={8}
+                opacity={0.9}
               />
             );
           });
-        }
-
-        if (feature.geometry.type === 'Polygon') {
-          const positions = feature.geometry.coordinates.map((ring: any) => 
-            ring.map((coord: any) => [coord[1], coord[0]])
-          );
-          return (
-            <Polyline 
-              key={`feature-${idx}`}
-              positions={positions}
-              color={strokeColor}
-              weight={weight}
-              opacity={opacity}
-            />
-          );
         }
 
         return null;

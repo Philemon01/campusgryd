@@ -680,5 +680,55 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "type": "faculty",
     "description": "Principal laboratory and lecture block for Sciences.",
     "landmark": "Science Axis"
+  },
+  "quantity_surveying": {
+    "name": "Quantity Surveying",
+    "aliases": ["QS"],
+    "lat": 4.798952722987123,
+    "lng": 6.979128308594227,
+    "address": "Faculty of Environmental Sciences, QXXH+MM8 University Nkpolu, Mgbuosimiri, Port Harcourt 500101, Rivers, Nigeria",
+    "type": "faculty",
+    "description": "Department of Quantity Surveying.",
+    "landmark": "Faculty of Environmental Sciences"
+  },
+  "ecobank": {
+    "name": "ecobank",
+    "aliases": ["Ecobank ATM"],
+    "lat": 4.7952461988818404,
+    "lng": 6.978672668337822,
+    "address": "Rivers State University, QXWH+4F7, Eagle Island, Port Harcourt 500101, Rivers, Nigeria",
+    "type": "facility",
+    "description": "Electronic banking and ATM services.",
+    "landmark": "Near Engineering"
+  },
+  "microfinance": {
+    "name": "microfinance",
+    "aliases": ["Microfinance Bank"],
+    "lat": 4.795138283735813,
+    "lng": 6.978609301149845,
+    "address": "QXWH+3C9, Road B, Diobu, Port Harcourt 500101, Rivers, Nigeria",
+    "type": "facility",
+    "description": "RSU Microfinance Bank services.",
+    "landmark": "Road b Area"
+  },
+  "engineering_block_2": {
+    "name": "Engineering Block",
+    "aliases": ["Engineering"],
+    "lat": 4.793856330681481,
+    "lng": 6.978192552924156,
+    "address": "Rivers State University, QXVH+G6X, Eagle Island, Port Harcourt 500101, Rivers, Nigeria",
+    "type": "faculty",
+    "description": "Another block within the engineering cluster.",
+    "landmark": "Engineering Cluster"
+  },
+  "road_b_west": {
+    "name": "Road b",
+    "aliases": ["B-Road West"],
+    "lat": 4.7949468428930295,
+    "lng": 6.977218575775623,
+    "address": "QXVG+WQX, Road B, Diobu, Port Harcourt 500101, Rivers, Nigeria",
+    "type": "facility",
+    "description": "Western segment of Road B.",
+    "landmark": "Near Engineering"
   }
 };

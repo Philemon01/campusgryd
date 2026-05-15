@@ -23,6 +23,9 @@ import { MenuDrawer } from './components/UI/MenuDrawer';
 import { FloatingActions } from './components/UI/FloatingActions';
 import { EventsPanel } from './components/UI/EventsPanel';
 import { CustomCampusRouter, RoutingMode } from './services/router';
+import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
+import { GeminiChatService } from './services/geminiService';
+import { ChatBot } from './components/Chat/ChatBot';
 import { FeatureCollection } from 'geojson';
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
@@ -37,6 +40,7 @@ export default function App() {
   const [isFollowingUser, setIsFollowingUser] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [navigationPath, setNavigationPath] = useState<[number, number][] | null>(null);
+  const [osrmRoute, setOsrmRoute] = useState<OSRMRoute | null>(null);
   const [mapView, setMapView] = useState({ center: RSU_CENTER, zoom: DEFAULT_ZOOM });
   const [isNavigating, setIsNavigating] = useState(false);
   const [isSatelliteView, setIsSatelliteView] = useState(false);
@@ -60,13 +64,13 @@ export default function App() {
   const [isEventsPanelOpen, setIsEventsPanelOpen] = useState(false);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [maneuvers, setManeuvers] = useState<Maneuver[]>([]);
   const [currentManeuverIndex, setCurrentManeuverIndex] = useState(-1);
   const [isVoiceAssistEnabled, setIsVoiceAssistEnabled] = useState(true);
-  const [availableRoutes, setAvailableRoutes] = useState<RouteOption[]>([]);
   const [plannedRoutes, setPlannedRoutes] = useState<RouteOption[]>([]);
-  const [selectedRouteId, setSelectedRouteId] = useState<string>('shortest');
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('osrm');
   const [recentLocationIds, setRecentLocationIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const recent = localStorage.getItem('recent_locations');
@@ -79,6 +83,10 @@ export default function App() {
     return new CustomCampusRouter(mapFeaturesData as FeatureCollection);
   }, []);
 
+  const chatService = useMemo(() => {
+    return new GeminiChatService(locations);
+  }, []);
+
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => {
@@ -88,54 +96,91 @@ export default function App() {
     }
   }, [notification]);
 
+  const [lastRouteCoords, setLastRouteCoords] = useState<{start: [number, number], end: [number, number]} | null>(null);
+
   useEffect(() => {
-    if (selectedLocation) {
-      const start = startLocation?.coordinates || userLocation || RSU_CENTER;
-      const end = selectedLocation.coordinates;
-      const startName = startLocation?.officialName || (userLocation ? "Your Location" : "Campus Center");
-      const endName = selectedLocation.officialName;
-      
-      const routes = generateRouteOptions(
-        start, 
-        end, 
-        startName, 
-        endName
-      );
-      setPlannedRoutes(routes);
-    } else {
-      setPlannedRoutes([]);
-    }
+    const updateRoutes = async () => {
+      if (selectedLocation) {
+        const start = startLocation?.coordinates || userLocation || RSU_CENTER;
+        const end = selectedLocation.coordinates;
+
+        // Check if we already have a route for these approximate coordinates (within 5m)
+        if (lastRouteCoords) {
+          const dStart = getDistanceInMeters(lastRouteCoords.start, start);
+          const dEnd = getDistanceInMeters(lastRouteCoords.end, end);
+          if (dStart < 5 && dEnd < 1) return;
+        }
+        
+        const startName = startLocation?.officialName || (userLocation ? "Your Location" : "Campus Center");
+        const endName = selectedLocation.officialName;
+        
+        const routes = await generateRouteOptions(
+          start, 
+          end, 
+          startName, 
+          endName
+        );
+        setPlannedRoutes(routes);
+        setLastRouteCoords({ start, end });
+      } else {
+        setPlannedRoutes([]);
+        setLastRouteCoords(null);
+      }
+    };
+    updateRoutes();
   }, [selectedLocation, startLocation, userLocation]);
 
-  // Handle location watch
+  useEffect(() => {
+    if (plannedRoutes.length > 0) {
+      const activeRoute = plannedRoutes.find(r => r.id === selectedRouteId) || plannedRoutes[0];
+      setNavigationPath(activeRoute.path);
+      setManeuvers(activeRoute.maneuvers);
+    } else if (!isNavigating) {
+      setNavigationPath(null);
+      setManeuvers([]);
+    }
+  }, [selectedRouteId, plannedRoutes, isNavigating]);
+
+  // Handle position watch
   useEffect(() => {
     if (!navigator.geolocation) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        const newPos: [number, number] = [position.coords.latitude, position.coords.longitude];
-        setUserLocation(newPos);
-        
-        // Only force map center if we are following user or in navigation from current location
-        // IMPORTANT: We use a check for startLocation to avoid dragging user back when manual start is set
-        if (isFollowingUser || (isNavigating && !startLocation)) {
-          setMapView(prev => ({ ...prev, center: newPos, zoom: isNavigating ? 18 : prev.zoom }));
-        }
-
-        if (isNavigating && currentManeuverIndex >= 0 && maneuvers[currentManeuverIndex]) {
-          const maneuverCoords = maneuvers[currentManeuverIndex].coordinates;
-          const dist = getDistanceInMeters(newPos, maneuverCoords);
-          if (dist < 15) {
-            nextManeuver();
-          }
-        }
+        const { latitude, longitude } = position.coords;
+        setUserLocation(prev => {
+          if (prev && prev[0] === latitude && prev[1] === longitude) return prev;
+          return [latitude, longitude];
+        });
       },
       (error) => console.error("GPS Watch error:", error),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isFollowingUser, isNavigating, currentManeuverIndex, maneuvers, startLocation]);
+  }, []);
+
+  // Handle navigation logic and camera follow
+  useEffect(() => {
+    if (!userLocation) return;
+    
+    // Only force map center if we are following user or in navigation from current location
+    if (isFollowingUser || (isNavigating && !startLocation)) {
+      setMapView(prev => {
+        const dist = getDistanceInMeters(prev.center, userLocation);
+        if (dist < 1 && (isNavigating ? prev.zoom === 18 : true)) return prev;
+        return { ...prev, center: userLocation, zoom: isNavigating ? 18 : prev.zoom };
+      });
+    }
+
+    if (isNavigating && currentManeuverIndex >= 0 && maneuvers[currentManeuverIndex]) {
+      const maneuverCoords = maneuvers[currentManeuverIndex].coordinates;
+      const dist = getDistanceInMeters(userLocation, maneuverCoords);
+      if (dist < 15) {
+        nextManeuver();
+      }
+    }
+  }, [userLocation, isFollowingUser, isNavigating, currentManeuverIndex, maneuvers, startLocation]);
 
   const handleLocateMe = () => {
     if (userLocation) {
@@ -145,10 +190,15 @@ export default function App() {
   };
 
   // Turn off following when user manually moves map
-  const onMapMove = (center: [number, number], zoom: number) => {
-    setMapView({ center, zoom });
+  const onMapMove = React.useCallback((center: [number, number], zoom: number) => {
+    setMapView(prev => {
+      // Only update if significantly changed to avoid jitter
+      const dist = getDistanceInMeters(prev.center, center);
+      if (dist < 0.1 && Math.abs(prev.zoom - zoom) < 0.01) return prev;
+      return { center, zoom };
+    });
     if (isFollowingUser) setIsFollowingUser(false);
-  };
+  }, [isFollowingUser]);
 
   useEffect(() => {
     localStorage.setItem('saved_locations', JSON.stringify(savedLocationIds));
@@ -190,19 +240,23 @@ export default function App() {
     recognition.start();
   };
 
-  const ai = useMemo(() => {
+  const getAiInstance = React.useCallback(() => {
     const key = process.env.GEMINI_API_KEY;
-    if (!key || key === 'undefined') return null;
+    if (!key || key === 'undefined' || key === '') return null;
     try {
       return new GoogleGenAI({ apiKey: key });
     } catch (error) {
+      console.error("Failed to create GoogleGenAI instance in App:", error);
       return null;
     }
   }, []);
 
-  const playVoiceDirections = async (text: string) => {
+  const playVoiceDirections = React.useCallback(async (text: string) => {
     if (isSpeaking) return;
+    
+    const ai = getAiInstance();
     setIsSpeaking(true);
+    
     if (isOffline || !ai) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.onend = () => setIsSpeaking(false);
@@ -212,7 +266,7 @@ export default function App() {
     }
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-3.1-flash-tts-preview",
         contents: [{ parts: [{ text: `Say clearly and helpfully: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -248,7 +302,7 @@ export default function App() {
     } catch (error) {
       setIsSpeaking(false);
     }
-  };
+  }, [isSpeaking, isOffline, getAiInstance]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -277,15 +331,20 @@ export default function App() {
     return locations.filter(loc => loc.type === activeCategory);
   }, [activeCategory]);
 
-  const handleLocationSelect = (loc: Location) => {
-    setRecentLocationIds(prev => {
-      const filtered = prev.filter(id => id !== loc.id);
-      return [loc.id, ...filtered].slice(0, 5);
-    });
+  const handleLocationSelect = React.useCallback(async (loc: Location | null) => {
+    if (loc) {
+      setRecentLocationIds(prev => {
+        const filtered = prev.filter(id => id !== loc.id);
+        return [loc.id, ...filtered].slice(0, 5);
+      });
+    }
+
     if (searchMode === 'destination') {
       setSelectedLocation(loc);
       setIsPanelExpanded(false);
-      setMapView({ center: loc.coordinates, zoom: 18 });
+      if (loc) {
+        setMapView({ center: loc.coordinates, zoom: 18 });
+      }
       setSearchQuery('');
     } else {
       setStartLocation(loc);
@@ -299,32 +358,9 @@ export default function App() {
         setMapView({ center: loc.coordinates, zoom: 17 });
       }
       setSearchQuery('');
-      
-      if (selectedLocation && loc) {
-        const start = loc.coordinates;
-        const end = selectedLocation.coordinates;
-        const startName = loc.officialName;
-        const endName = selectedLocation.officialName;
-        
-        const routes = generateRouteOptions(
-          start, 
-          end, 
-          startName, 
-          endName
-        );
-        
-        setAvailableRoutes(routes);
-        if (routes.length > 0) {
-          setSelectedRouteId(routes[0].id);
-          setNavigationPath(routes[0].path);
-          setManeuvers(routes[0].maneuvers);
-          setIsPanelExpanded(true);
-          setMapView({ center: [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2], zoom: 16 });
-        }
-      }
     }
     setIsSearchFocused(false);
-  };
+  }, [searchMode, userLocation]);
 
   const handleEventNavigation = (locationId: string) => {
     const loc = locations.find(l => l.id === locationId);
@@ -344,7 +380,6 @@ export default function App() {
     setIsFollowingUser(false);
     setNavigationPath(null);
     setManeuvers([]);
-    setAvailableRoutes([]);
     setPlannedRoutes([]);
     setCurrentManeuverIndex(-1);
     setSelectedLocation(null);
@@ -450,76 +485,92 @@ export default function App() {
     return groupedManeuvers;
   };
 
-  const generateRouteOptions = (
+  const generateRouteOptions = async (
     start: [number, number], 
     end: [number, number], 
     startName: string, 
     endName: string
-  ): RouteOption[] => {
+  ): Promise<RouteOption[]> => {
     const options: RouteOption[] = [];
     
-    // 1. Shortcut Path (All paths allowed)
+    // 1. OSRM Walking Route (Live API)
+    const osrmData = await fetchOSRMRoute(start, end);
+    if (osrmData) {
+      const path = osrmData.geometry.coordinates.map(c => [c[1], c[0]] as [number, number]);
+      const steps = osrmData.legs[0].steps.map(s => ({
+        instruction: s.maneuver.instruction,
+        distance: s.distance,
+        type: convertOSRMType(s.maneuver.type, s.maneuver.modifier),
+        coordinates: [s.maneuver.location[1], s.maneuver.location[0]] as [number, number]
+      }));
+
+      options.push({
+        id: 'osrm',
+        name: 'Walking Directions (OSRM)',
+        duration: Math.ceil(osrmData.duration / 60),
+        distance: Math.floor(osrmData.distance),
+        path,
+        maneuvers: steps
+      });
+    }
+    
+    // 2. Shortcut Path (Local Campus Router)
     const shortcutPath = campusRouter.findRoute(start, end, 'shortest');
     if (shortcutPath) {
       const dist = shortcutPath.reduce((acc, curr, i) => i === 0 ? 0 : acc + getDistanceInMeters(shortcutPath[i-1], curr), 0);
       options.push({
         id: 'shortest',
-        name: 'Quick Shortcut',
-        duration: Math.ceil(dist / 75), // slightly faster pace on paths
+        name: 'Campus Shortcut',
+        duration: Math.ceil(dist / 75), 
         distance: Math.floor(dist),
         path: shortcutPath,
         maneuvers: generatePathManeuvers(shortcutPath, startName, endName)
       });
     }
 
-    // 2. Main Roads / Accessible (Prefers asphalt roads)
+    // 3. Accessible (Local Campus Router)
     const accessiblePath = campusRouter.findRoute(start, end, 'accessible');
     if (accessiblePath) {
       const dist = accessiblePath.reduce((acc, curr, i) => i === 0 ? 0 : acc + getDistanceInMeters(accessiblePath[i-1], curr), 0);
       options.push({
         id: 'accessible',
-        name: 'Main Road (Accessible)',
-        duration: Math.ceil(dist / 85), // easier walking on road
+        name: 'Main Roads',
+        duration: Math.ceil(dist / 85),
         distance: Math.floor(dist),
         path: accessiblePath,
         maneuvers: generatePathManeuvers(accessiblePath, startName, endName)
       });
     }
 
-    // 3. Keep fallback if nothing found
-    if (options.length === 0) {
-      const directDist = getDistanceInMeters(start, end);
-      options.push({
-        id: 'offroad',
-        name: 'Direct Path (Off-Road)',
-        duration: Math.ceil(directDist / 70),
-        distance: Math.floor(directDist),
-        path: [start, end],
-        maneuvers: [
-          { instruction: `Head directly from ${startName} to ${endName}. Note: This path cuts across terrain.`, distance: Math.floor(directDist), type: 'straight', coordinates: start },
-          { instruction: `Arriving at ${endName}.`, distance: 0, type: 'destination', coordinates: end }
-        ]
-      });
-    }
-
     return options;
   };
 
-  const startNavigation = () => {
-    if (!selectedLocation) return;
+  const convertOSRMType = (type: string, modifier?: string): Maneuver['type'] => {
+    if (type === 'depart') return 'straight';
+    if (type === 'arrive') return 'destination';
+    if (modifier?.includes('slight left')) return 'slight-left';
+    if (modifier?.includes('slight right')) return 'slight-right';
+    if (modifier?.includes('left')) return 'left';
+    if (modifier?.includes('right')) return 'right';
+    return 'straight';
+  };
+
+  const startNavigation = async (overrideDest?: Location) => {
+    const dest = overrideDest || selectedLocation;
+    if (!dest) return;
     const start = startLocation?.coordinates || userLocation || RSU_CENTER;
-    const end = selectedLocation.coordinates;
+    const end = dest.coordinates;
     const startName = startLocation?.officialName || (userLocation ? "Your Location" : "Campus Center");
-    const endName = selectedLocation.officialName;
+    const endName = dest.officialName;
     
-    const routes = generateRouteOptions(
+    const routes = await generateRouteOptions(
       start, 
       end, 
       startName, 
       endName
     );
     
-    setAvailableRoutes(routes);
+    setPlannedRoutes(routes);
     if (routes.length > 0) {
       const activeRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
       setManeuvers(activeRoute.maneuvers);
@@ -537,10 +588,55 @@ export default function App() {
       if (isVoiceAssistEnabled) {
         playVoiceDirections(`Routing to ${endName}. Choosing ${activeRoute.name}.`);
       }
+      return activeRoute.maneuvers;
     }
+    return [];
   };
 
-  const nextManeuver = () => {
+  const handleChatMessage = async (text: string) => {
+    const intent = await chatService.parseIntent(text);
+    
+    if (intent.type === 'navigate' && intent.destinationId) {
+      const dest = locations.find(l => l.id === intent.destinationId);
+      const origin = intent.originId ? locations.find(l => l.id === intent.originId) : null;
+      
+      if (dest) {
+        if (origin) {
+          setStartLocation(origin);
+        } else {
+          setStartLocation(null); // Use current/default
+        }
+        setSelectedLocation(dest);
+        setMapView({ center: dest.coordinates, zoom: 18 });
+        
+        // Wait for state updates then trigger navigation
+        setTimeout(async () => {
+          await startNavigation(dest);
+        }, 100);
+      }
+    } else if (intent.type === 'lost') {
+      await handleRecalculate();
+    }
+    
+    const response = await chatService.generateResponse(intent, text);
+    return { 
+      response, 
+      destinationId: intent.destinationId, 
+      type: intent.type 
+    };
+  };
+
+  const handleRecalculate = async () => {
+    if (!selectedLocation) return;
+    setNotification({ message: "Recalculating route...", type: 'info' });
+    
+    // Force start from current user location
+    setStartLocation(null); 
+    await startNavigation();
+    setNotification({ message: "Route updated!", type: 'success' });
+  };
+
+  const nextManeuver = React.useCallback(() => {
     if (currentManeuverIndex < maneuvers.length - 1) {
       const nextIndex = currentManeuverIndex + 1;
       setCurrentManeuverIndex(nextIndex);
@@ -551,7 +647,7 @@ export default function App() {
       setManeuvers([]);
       setCurrentManeuverIndex(-1);
     }
-  };
+  }, [currentManeuverIndex, maneuvers, isVoiceAssistEnabled, playVoiceDirections]);
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-rsu-bg">
@@ -607,6 +703,7 @@ export default function App() {
         handleGetDirections={handleGetDirections}
         setActiveCategory={(cat) => setActiveCategory(cat)}
         getCategoryIcon={getCategoryIcon}
+        onToggleChat={() => setIsChatOpen(!isChatOpen)}
       />
 
       <FloatingActions 
@@ -656,6 +753,16 @@ export default function App() {
         toggleSaveLocation={toggleSaveLocation}
         getCategoryIcon={getCategoryIcon}
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
+      />
+
+      <ChatBot 
+        onSendMessage={handleChatMessage}
+        isNavigating={isNavigating}
+        activeManeuvers={maneuvers}
+        onRecalculate={handleRecalculate}
+        isOpen={isChatOpen}
+        onOpenChange={setIsChatOpen}
+        showFloatingButton={false}
       />
 
       <AnimatePresence>
