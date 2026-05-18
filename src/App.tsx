@@ -65,6 +65,19 @@ export default function App() {
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [navSession, setNavSession] = useState<{
+    phase: 'idle' | 'clarification' | 'selection' | 'guidance' | 'completion';
+    destinationId: string | null;
+    originId: string | null;
+    mode: 'walk' | 'cab' | null;
+    currentStepIndex: number;
+  }>({
+    phase: 'idle',
+    destinationId: null,
+    originId: null,
+    mode: null,
+    currentStepIndex: -1
+  });
   const [isListening, setIsListening] = useState(false);
   const [maneuvers, setManeuvers] = useState<Maneuver[]>([]);
   const [currentManeuverIndex, setCurrentManeuverIndex] = useState(-1);
@@ -595,34 +608,121 @@ export default function App() {
 
   const handleChatMessage = async (text: string) => {
     const intent = await chatService.parseIntent(text);
-    
-    if (intent.type === 'navigate' && intent.destinationId) {
-      const dest = locations.find(l => l.id === intent.destinationId);
-      const origin = intent.originId ? locations.find(l => l.id === intent.originId) : null;
-      
-      if (dest) {
-        if (origin) {
-          setStartLocation(origin);
-        } else {
-          setStartLocation(null); // Use current/default
+    let calculatedDistance: number | undefined = undefined;
+    let nextPhase = navSession.phase;
+    let updatedSession = { ...navSession };
+
+    // Handle session transitions
+    if (navSession.phase === 'idle' || navSession.phase === 'completion') {
+      if (intent.isVague) {
+        nextPhase = 'clarification';
+        updatedSession = { 
+          phase: 'clarification', 
+          destinationId: intent.destinationId || null, 
+          originId: intent.originId || null, 
+          mode: null, 
+          currentStepIndex: -1 
+        };
+      } else if (intent.type === 'navigate' && intent.destinationId) {
+        const dest = locations.find(l => l.id === intent.destinationId);
+        if (dest) {
+          const origin = intent.originId ? locations.find(l => l.id === intent.originId) : null;
+          const start = origin?.coordinates || userLocation || RSU_CENTER;
+          calculatedDistance = Math.floor(getDistanceInMeters(start, dest.coordinates));
+          nextPhase = 'selection';
+          updatedSession = { 
+            phase: 'selection', 
+            destinationId: intent.destinationId, 
+            originId: intent.originId || null, 
+            mode: null, 
+            currentStepIndex: -1 
+          };
+          
+          // Update map to show destinations
+          setSelectedLocation(dest);
+          if (origin) setStartLocation(origin);
+          setMapView({ center: dest.coordinates, zoom: 17 });
         }
-        setSelectedLocation(dest);
-        setMapView({ center: dest.coordinates, zoom: 18 });
-        
-        // Wait for state updates then trigger navigation
-        setTimeout(async () => {
-          await startNavigation(dest);
-        }, 100);
       }
-    } else if (intent.type === 'lost') {
-      await handleRecalculate();
+    } else if (navSession.phase === 'clarification') {
+      if (intent.type === 'navigate' && intent.destinationId && !intent.isVague) {
+        const dest = locations.find(l => l.id === intent.destinationId);
+        if (dest) {
+          const origin = intent.originId ? locations.find(l => l.id === intent.originId) : (updatedSession.originId ? locations.find(l => l.id === updatedSession.originId) : null);
+          const start = origin?.coordinates || userLocation || RSU_CENTER;
+          calculatedDistance = Math.floor(getDistanceInMeters(start, dest.coordinates));
+          nextPhase = 'selection';
+          updatedSession = { 
+            ...updatedSession, 
+            phase: 'selection', 
+            destinationId: intent.destinationId, 
+            originId: intent.originId || updatedSession.originId 
+          };
+          setSelectedLocation(dest);
+        }
+      }
+    } else if (navSession.phase === 'selection') {
+      if (intent.type === 'choice' && intent.value) {
+        nextPhase = 'guidance';
+        const dest = locations.find(l => l.id === updatedSession.destinationId);
+        if (dest) {
+          const origin = updatedSession.originId ? locations.find(l => l.id === updatedSession.originId) : null;
+          if (origin) setStartLocation(origin);
+          
+          const steps = await startNavigation(dest);
+          updatedSession = { 
+            ...updatedSession, 
+            phase: 'guidance', 
+            mode: intent.value as 'walk' | 'cab', 
+            currentStepIndex: 0 
+          };
+          setCurrentManeuverIndex(0);
+        }
+      }
+    } else if (navSession.phase === 'guidance') {
+      if (intent.type === 'confirm') {
+        const nextIndex = updatedSession.currentStepIndex + 1;
+        if (nextIndex >= maneuvers.length) {
+          nextPhase = 'completion';
+          updatedSession = { ...updatedSession, phase: 'completion' };
+          setIsNavigating(false);
+          setCurrentManeuverIndex(-1);
+        } else {
+          updatedSession = { ...updatedSession, currentStepIndex: nextIndex };
+          setCurrentManeuverIndex(nextIndex);
+          setMapView(prev => ({ ...prev, center: maneuvers[nextIndex].coordinates, zoom: 19 }));
+        }
+      }
     }
-    
-    const response = await chatService.generateResponse(intent, text);
+
+    setNavSession(updatedSession);
+
+    // Get the current progress text for Gemini to narrate
+    const currentStepInstruction = updatedSession.currentStepIndex >= 0 && maneuvers[updatedSession.currentStepIndex] 
+      ? maneuvers[updatedSession.currentStepIndex].instruction 
+      : undefined;
+
+    const response = await chatService.generateResponse(intent, {
+      extraInfo: text,
+      distance: calculatedDistance,
+      currentStep: currentStepInstruction,
+      isLastStep: updatedSession.currentStepIndex === maneuvers.length - 1 && maneuvers.length > 0,
+      phase: updatedSession.phase
+    });
+
+    if (isVoiceAssistEnabled && response) {
+      playVoiceDirections(response);
+    }
+
     return { 
       response, 
-      destinationId: intent.destinationId, 
-      type: intent.type 
+      destinationId: updatedSession.destinationId || undefined, 
+      type: intent.type,
+      quickActions: updatedSession.phase === 'selection' 
+        ? [{ label: '🚶 Walk', value: 'Walk' }, { label: '🚖 Cab/Shuttle', value: 'Cab' }]
+        : updatedSession.phase === 'guidance'
+        ? [{ label: 'I have arrived', value: 'Next' }]
+        : undefined
     };
   };
 

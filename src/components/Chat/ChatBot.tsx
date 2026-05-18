@@ -10,10 +10,11 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   directions?: Maneuver[];
+  quickActions?: { label: string; value: string; icon?: React.ReactNode }[];
 }
 
 interface ChatBotProps {
-  onSendMessage: (text: string) => Promise<{ response: string; destinationId?: string; type: string }>;
+  onSendMessage: (text: string) => Promise<{ response: string; destinationId?: string; type: string; quickActions?: { label: string; value: string }[] }>;
   isNavigating: boolean;
   activeManeuvers?: Maneuver[];
   onRecalculate?: () => void;
@@ -61,12 +62,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputText.trim() || isLoading) return;
+  const handleSend = async (overrideText?: string) => {
+    const textToSend = overrideText || inputText;
+    if (!textToSend.trim() || isLoading) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
-      text: inputText,
+      text: textToSend,
       sender: 'user',
       timestamp: new Date()
     };
@@ -82,7 +84,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({
         id: (Date.now() + 1).toString(),
         text: result.response,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        quickActions: result.quickActions
       };
 
       if (result.type === 'navigate' && activeManeuvers) {
@@ -145,12 +148,32 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                   )}
                 >
                   <div className={cn(
-                    "p-3 rounded-2xl text-sm",
+                    "p-3 rounded-2xl text-sm shadow-sm",
                     msg.sender === 'user' 
                       ? "bg-rsu-green text-white rounded-tr-none" 
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none"
+                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-gray-700"
                   )}>
-                    {msg.text}
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                    
+                    {msg.quickActions && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {msg.quickActions.map((action, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setInputText(action.value);
+                              // Using setTimeout to ensure state update is processed or 
+                              // just calling a separate function. 
+                              // Let's refactor handleSend to take an optional override text.
+                              handleSend(action.value);
+                            }}
+                            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-rsu-navy hover:text-white dark:hover:bg-rsu-green text-rsu-navy dark:text-white rounded-full text-xs font-bold transition-all border border-gray-200 dark:border-gray-600"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     
                     {msg.directions && (
                       <div className="mt-3 pt-3 border-t border-black/10 space-y-2">
