@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User preferences and role information.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "faculty": { "type": "string" },
+        "department": { "type": "string" },
+        "level": { "type": "string" },
+        "semester": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "Timetable": {
+      "title": "Timetable Metadata",
+      "description": "Master entry for a specific faculty/department timetable.",
+      "type": "object",
+      "properties": {
+        "faculty": { "type": "string" },
+        "department": { "type": "string" },
+        "level": { "type": "string" },
+        "semester": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["published", "draft"] }
+      },
+      "required": ["faculty", "department", "level", "semester", "creatorId", "status"]
+    },
+    "TimetableSlot": {
+      "title": "Class Slot",
+      "description": "A single class entry in a timetable.",
+      "type": "object",
+      "properties": {
+        "courseCode": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "lecturer": { "type": "string" },
+        "day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "startTime": { "type": "string", "description": "e.g. 08:00" },
+        "endTime": { "type": "string", "description": "e.g. 10:00" },
+        "venue": { "type": "string" },
+        "locationId": { "type": "string", "description": "Matched to campus locations.id" }
+      },
+      "required": ["courseCode", "day", "startTime", "endTime"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and settings."
+    },
+    "/timetables/{timetableId}": {
+      "schema": "Timetable",
+      "description": "Timetable metadata."
+    },
+    "/timetables/{timetableId}/slots/{slotId}": {
+      "schema": "TimetableSlot",
+      "description": "Individual slots for a timetable."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, LocateFixed, Calendar } from 'lucide-react';
+import { Layers, LocateFixed, Calendar, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface FloatingActionsProps {
@@ -9,6 +9,7 @@ interface FloatingActionsProps {
   handleLocateMe: () => void;
   isFollowingUser: boolean;
   toggleEvents: () => void;
+  toggleTimetable: () => void;
 }
 
 export const FloatingActions: React.FC<FloatingActionsProps> = ({
@@ -17,16 +18,17 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
   setNotification,
   handleLocateMe,
   isFollowingUser,
-  toggleEvents
+  toggleEvents,
+  toggleTimetable
 }) => {
   return (
     <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
       <button
-        onClick={toggleEvents}
-        className="p-3 bg-white text-rsu-navy border border-rsu-border rounded-full shadow-lg hover:bg-rsu-navy/10 transition-all flex items-center justify-center"
-        title="Campus Schedule"
+        onClick={toggleTimetable}
+        className="p-3 bg-rsu-orange text-white border-2 border-white rounded-full shadow-lg hover:bg-rsu-navy transition-all flex items-center justify-center scale-110"
+        title="Smart Timetable Sync"
       >
-        <Calendar size={24} />
+        <BookOpen size={28} />
       </button>
 
       <button

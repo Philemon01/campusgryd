@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User Rules
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.email is string && data.email.size() <= 128
+          && data.role in ['admin', 'student']
+          && (!('faculty' in data) || data.faculty is string)
+          && (!('department' in data) || data.department is string)
+          && (!('level' in data) || data.level is string)
+          && (!('semester' in data) || data.semester is string);
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && isOwner(userId) && isValidUser(incoming())
+        && incoming().role == existing().role; // Cannot change own role
+    }
+
+    // User Syncs (Public records of sync)
+    match /user_syncs/{syncId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Notifications (Briefings)
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    // Timetable Rules
+    match /timetables/{timetableId} {
+      function isValidTimetable(data) {
+        return data.faculty is string && data.faculty.size() <= 128
+          && data.department is string && data.department.size() <= 128
+          && data.level is string
+          && data.semester is string
+          && data.creatorId == request.auth.uid
+          && data.status in ['published', 'draft'];
+      }
+
+      function isCreator() {
+        return isSignedIn() && existing().creatorId == request.auth.uid;
+      }
+
+      allow list: if isSignedIn() && (resource.data.status == 'published' || isCreator());
+      allow get: if isSignedIn() && (resource.data.status == 'published' || isCreator());
+      allow create: if isSignedIn() && isValidTimetable(incoming());
+      allow update: if isSignedIn() && isCreator() && isValidTimetable(incoming())
+        && incoming().creatorId == existing().creatorId;
+      allow delete: if isSignedIn() && isCreator();
+
+      // Slots
+      match /slots/{slotId} {
+        function isValidSlot(data) {
+          return data.courseCode is string && data.courseCode.size() <= 20
+            && data.day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            && data.startTime.matches('^[0-9]{2}:[0-9]{2}$')
+            && data.endTime.matches('^[0-9]{2}:[0-9]{2}$');
+        }
+
+        allow list: if isSignedIn() && (get(/databases/$(database)/documents/timetables/$(timetableId)).data.status == 'published' || get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid);
+        allow get: if isSignedIn() && (get(/databases/$(database)/documents/timetables/$(timetableId)).data.status == 'published' || get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid);
+        allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid && isValidSlot(incoming());
+      }
+    }
+  }
+}

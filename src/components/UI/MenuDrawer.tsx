@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Bookmark, Trash2, History, GraduationCap, Calendar } from 'lucide-react';
+import { X, Bookmark, Trash2, History, GraduationCap, Calendar, BookOpen } from 'lucide-react';
 import { Location } from '../../types';
 
 interface MenuDrawerProps {
@@ -12,6 +12,7 @@ interface MenuDrawerProps {
   toggleSaveLocation: (id: string) => void;
   getCategoryIcon: (type: string) => React.ReactNode;
   toggleEvents: () => void;
+  toggleTimetable: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -22,7 +23,8 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   handleLocationSelect,
   toggleSaveLocation,
   getCategoryIcon,
-  toggleEvents
+  toggleEvents,
+  toggleTimetable
 }) => {
   return (
     <AnimatePresence>
@@ -55,26 +57,30 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
-              {/* Event Schedule Quick Access */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+              {/* Timetable Sync Quick Access */}
               <button
                 onClick={() => {
-                  toggleEvents();
+                  toggleTimetable();
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center p-4 bg-rsu-navy text-white rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-95 group mb-6 overflow-hidden relative"
+                className="w-full flex items-center p-5 bg-rsu-orange text-white rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-95 group overflow-hidden relative"
               >
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                  <Calendar size={64} strokeWidth={3} />
+                  <BookOpen size={80} strokeWidth={3} />
                 </div>
-                <div className="p-3 bg-white/20 rounded-xl mr-4">
-                  <Calendar size={24} />
+                <div className="p-4 bg-white/20 rounded-2xl mr-4 shadow-inner">
+                  <BookOpen size={30} />
                 </div>
                 <div className="text-left relative z-10">
-                  <div className="font-black italic text-sm tracking-tight">CAMPUS SCHEDULE</div>
-                  <div className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Events & News</div>
+                  <div className="font-black italic text-lg tracking-tight uppercase leading-tight">SMART SYNC</div>
+                  <div className="text-[10px] font-bold opacity-80 uppercase tracking-widest leading-none mt-1">AI Timetable & Calendar</div>
                 </div>
               </button>
+
+              <div className="pt-4 pb-2">
+                <div className="text-[10px] font-black text-rsu-navy/30 uppercase tracking-[0.2em] mb-4 px-2">Campus Tools</div>
+              </div>
 
               {/* Saved Locations Section */}
               <div>

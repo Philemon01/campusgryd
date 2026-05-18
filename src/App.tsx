@@ -22,10 +22,13 @@ import { Header } from './components/UI/Header';
 import { MenuDrawer } from './components/UI/MenuDrawer';
 import { FloatingActions } from './components/UI/FloatingActions';
 import { EventsPanel } from './components/UI/EventsPanel';
+import { TimetablePanel } from './components/UI/TimetablePanel';
 import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { db, auth } from './lib/firebase';
 import { FeatureCollection } from 'geojson';
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
@@ -62,6 +65,7 @@ export default function App() {
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEventsPanelOpen, setIsEventsPanelOpen] = useState(false);
+  const [isTimetableOpen, setIsTimetableOpen] = useState(false);
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -108,6 +112,32 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [notification]);
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          // Only show if it's new (within last 5 mins to avoid old ones on login)
+          const isRecent = data.createdAt && (Date.now() - data.createdAt.toMillis() < 300000);
+          if (isRecent) {
+            setNotification({ message: data.message, type: 'info' });
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [lastRouteCoords, setLastRouteCoords] = useState<{start: [number, number], end: [number, number]} | null>(null);
 
@@ -813,12 +843,22 @@ export default function App() {
         handleLocateMe={handleLocateMe}
         isFollowingUser={isFollowingUser}
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
+        toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)}
       />
 
       <AnimatePresence>
         {isEventsPanelOpen && (
           <EventsPanel 
             onClose={() => setIsEventsPanelOpen(false)}
+            onNavigateTo={handleEventNavigation}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isTimetableOpen && (
+          <TimetablePanel 
+            onClose={() => setIsTimetableOpen(false)}
             onNavigateTo={handleEventNavigation}
           />
         )}
@@ -853,6 +893,7 @@ export default function App() {
         toggleSaveLocation={toggleSaveLocation}
         getCategoryIcon={getCategoryIcon}
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
+        toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)}
       />
 
       <ChatBot 
