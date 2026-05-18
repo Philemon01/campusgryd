@@ -44,27 +44,69 @@ export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
     }
   });
 
-  const prompt = `Extract all lecture information from this school timetable. 
-  Map abbreviations to full names if possible. 
-  Ensure day is one of the enum values. 
-  Format times as HH:mm.`;
+  const prompt = `Extract all lecture information from this school timetable image or PDF.
+  
+  CONTEXT: This is for Rivers State University (RSU).
+  
+  DATA TO EXTRACT:
+  1. Course Code (e.g., GNS101, MTH101)
+  2. Course Title (Full name if available)
+  3. Lecturer Name
+  4. Day of the week
+  5. Start Time (HH:mm, 24-hour format)
+  6. End Time (HH:mm, 24-hour format)
+  7. Venue/Location (e.g., LT1, Engineering Block, New Science Building)
+  
+  ENUMS:
+  Day must be exactly one of: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.
+  
+  OUTPUT: A JSON object matching the provided schema. 
+  If a field is missing, provide an empty string or null as per schema.
+  Be precise and thorough. Include EVERY class found.`;
 
-  const result = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: [
-      {
-        inlineData: {
-          data: fileBuffer.toString("base64"),
-          mimeType
-        }
+  let result;
+  try {
+    console.log(`Phase: AI Vision parsing started for ${mimeType}`);
+    result = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              data: fileBuffer.toString("base64"),
+              mimeType
+            }
+          }
+        ]
       },
-      prompt
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: timetableSchema
-    }
-  });
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: timetableSchema
+      }
+    });
+  } catch (err: any) {
+    console.error("Gemini API direct error:", err);
+    throw new Error(`AI Service Error: ${err.message || 'The AI model could not process this request. This might be due to model availability or file issues.'}`);
+  }
 
-  return JSON.parse(result.text || "{}");
+  const responseText = result.text;
+  console.log("Gemini Response Text Length:", responseText?.length);
+  console.log("Gemini Response Text Sample:", responseText?.substring(0, 100));
+  
+  if (!responseText) {
+    console.error("Gemini returned an empty response. Full result:", JSON.stringify(result));
+    throw new Error("The AI returned an empty response. Please ensure the image is bright and the text is legible.");
+  }
+
+  try {
+    // Basic cleanup in case of markdown wrapping (though responseMimeType should prevent this)
+    const jsonStr = responseText.replace(/```json\s?|\s?```/g, '').trim();
+    const parsed = JSON.parse(jsonStr);
+    console.log("Parsed Slots Count:", parsed.slots?.length);
+    return parsed;
+  } catch (e) {
+    console.error("Failed to parse JSON from model. Raw text:", responseText);
+    throw new Error("The AI returned an invalid response format. Please try again or use manual entry.");
+  }
 }

@@ -13,6 +13,9 @@ interface MenuDrawerProps {
   getCategoryIcon: (type: string) => React.ReactNode;
   toggleEvents: () => void;
   toggleTimetable: () => void;
+  user: any;
+  onSignIn: () => void;
+  onSignOut: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -24,7 +27,10 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   toggleSaveLocation,
   getCategoryIcon,
   toggleEvents,
-  toggleTimetable
+  toggleTimetable,
+  user,
+  onSignIn,
+  onSignOut
 }) => {
   return (
     <AnimatePresence>
@@ -58,6 +64,26 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+              {/* User Section */}
+              <div className="p-4 bg-rsu-bg rounded-2xl border border-rsu-border/20 shadow-inner">
+                {user ? (
+                  <div className="flex items-center gap-3">
+                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-rsu-orange" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-rsu-navy truncate">{user.displayName}</p>
+                      <button onClick={onSignOut} className="text-[9px] font-bold text-red-500 uppercase tracking-widest hover:underline">Sign Out</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={onSignIn}
+                    className="w-full py-3 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm"
+                  >
+                    Sync Your Account
+                  </button>
+                )}
+              </div>
+
               {/* Timetable Sync Quick Access */}
               <button
                 onClick={() => {

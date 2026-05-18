@@ -28,10 +28,11 @@ import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db, auth } from './lib/firebase';
+import { db, auth, googleProvider } from './lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { FeatureCollection } from 'geojson';
 
-type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark';
+type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark' | 'department';
 
 export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +70,7 @@ export default function App() {
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [navSession, setNavSession] = useState<{
     phase: 'idle' | 'clarification' | 'selection' | 'guidance' | 'completion';
     destinationId: string | null;
@@ -103,6 +105,44 @@ export default function App() {
   const chatService = useMemo(() => {
     return new GeminiChatService(locations);
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      setNotification({ message: "Signed in successfully!", type: 'success' });
+    } catch (error: any) {
+      console.error("Auth error:", error.code, error.message);
+      if (error.code === 'auth/popup-blocked') {
+        setNotification({ message: "Sign-in popup blocked. Please allow popups for this site.", type: 'error' });
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Silently ignore or show minor info
+      } else if (error.code !== 'auth/popup-closed-by-user') {
+        setNotification({ message: "Sign in failed: " + error.message, type: 'error' });
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setNotification({ message: "Signed out safely.", type: 'info' });
+    } catch (error: any) {
+      setNotification({ message: "Sign out failed.", type: 'error' });
+    }
+  };
 
   useEffect(() => {
     if (notification) {
@@ -371,6 +411,13 @@ export default function App() {
 
   const filteredLocations = useMemo(() => {
     if (activeCategory === 'all') return locations;
+    if (activeCategory === 'department' as any) {
+      return locations.filter(loc => 
+        loc.officialName.toLowerCase().includes('dept') || 
+        loc.officialName.toLowerCase().includes('department') ||
+        loc.aliases.some(a => a.toLowerCase().includes('dept') || a.toLowerCase().includes('department'))
+      );
+    }
     return locations.filter(loc => loc.type === activeCategory);
   }, [activeCategory]);
 
@@ -410,6 +457,7 @@ export default function App() {
     if (loc) {
       handleLocationSelect(loc);
       setIsEventsPanelOpen(false);
+      setIsTimetableOpen(false);
     }
   };
 
@@ -653,21 +701,24 @@ export default function App() {
           mode: null, 
           currentStepIndex: -1 
         };
-      } else if (intent.type === 'navigate' && intent.destinationId) {
+      } else if ((intent.type === 'navigate' || intent.type === 'query') && intent.destinationId) {
         const dest = locations.find(l => l.id === intent.destinationId);
         if (dest) {
           const origin = intent.originId ? locations.find(l => l.id === intent.originId) : null;
           const start = origin?.coordinates || userLocation || RSU_CENTER;
           calculatedDistance = Math.floor(getDistanceInMeters(start, dest.coordinates));
-          nextPhase = 'selection';
-          updatedSession = { 
-            phase: 'selection', 
-            destinationId: intent.destinationId, 
-            originId: intent.originId || null, 
-            mode: null, 
-            currentStepIndex: -1 
-          };
           
+          if (intent.type === 'navigate') {
+            nextPhase = 'selection';
+            updatedSession = { 
+              phase: 'selection', 
+              destinationId: intent.destinationId, 
+              originId: intent.originId || null, 
+              mode: null, 
+              currentStepIndex: -1 
+            };
+          }
+
           // Update map to show destinations
           setSelectedLocation(dest);
           if (origin) setStartLocation(origin);
@@ -791,6 +842,7 @@ export default function App() {
         navigationPath={navigationPath}
         mapFeatures={mapFeaturesData}
         onLocationSelect={(loc) => setSelectedLocation(loc)}
+        setStartLocation={setStartLocation}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}
       />
@@ -875,6 +927,7 @@ export default function App() {
         setIsPanelExpanded={setIsPanelExpanded}
         handleGetDirections={handleGetDirections}
         setSelectedLocation={setSelectedLocation}
+        setStartLocation={setStartLocation}
         endSession={endSession}
         playVoiceDirections={playVoiceDirections}
         toggleSaveLocation={toggleSaveLocation}
@@ -894,10 +947,17 @@ export default function App() {
         getCategoryIcon={getCategoryIcon}
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
         toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)}
+        user={currentUser}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
       />
 
       <ChatBot 
         onSendMessage={handleChatMessage}
+        onLocationFocus={(id) => {
+          const loc = locations.find(l => l.id === id);
+          if (loc) handleLocationSelect(loc);
+        }}
         isNavigating={isNavigating}
         activeManeuvers={maneuvers}
         onRecalculate={handleRecalculate}

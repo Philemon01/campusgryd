@@ -15,6 +15,7 @@ interface InfoPanelProps {
   setIsPanelExpanded: (e: boolean) => void;
   handleGetDirections: () => void;
   setSelectedLocation: (l: Location | null) => void;
+  setStartLocation?: (l: Location | null) => void;
   endSession: () => void;
   playVoiceDirections: (t: string) => void;
   toggleSaveLocation: (id: string) => void;
@@ -35,6 +36,7 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
   setIsPanelExpanded,
   handleGetDirections,
   setSelectedLocation,
+  setStartLocation,
   endSession,
   playVoiceDirections,
   toggleSaveLocation,
@@ -257,6 +259,18 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
           </div>
 
           <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-rsu-border/30">
+            {!isNavigating && (
+              <button 
+                onClick={() => {
+                  setStartLocation?.(selectedLocation);
+                  setIsPanelExpanded(false);
+                }}
+                className="w-full py-2.5 bg-rsu-bg border border-rsu-border text-rsu-navy rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-rsu-border/20 transition-all shadow-sm"
+              >
+                <MapPin size={14} className="text-blue-500" />
+                Set as Starting Point
+              </button>
+            )}
             <div className="flex gap-2">
               <button 
                 onClick={() => toggleSaveLocation(selectedLocation.id)}

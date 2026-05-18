@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Send, X, Bot, User, RotateCcw } from 'lucide-react';
+import Markdown from 'react-markdown';
 import { cn } from '../../lib/utils';
 import { Location, Maneuver } from '../../types';
 
@@ -10,11 +11,13 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   directions?: Maneuver[];
+  destinationId?: string;
   quickActions?: { label: string; value: string; icon?: React.ReactNode }[];
 }
 
 interface ChatBotProps {
   onSendMessage: (text: string) => Promise<{ response: string; destinationId?: string; type: string; quickActions?: { label: string; value: string }[] }>;
+  onLocationFocus?: (locationId: string) => void;
   isNavigating: boolean;
   activeManeuvers?: Maneuver[];
   onRecalculate?: () => void;
@@ -25,6 +28,7 @@ interface ChatBotProps {
 
 export const ChatBot: React.FC<ChatBotProps> = ({ 
   onSendMessage, 
+  onLocationFocus,
   isNavigating, 
   activeManeuvers,
   onRecalculate,
@@ -85,6 +89,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
         text: result.response,
         sender: 'bot',
         timestamp: new Date(),
+        destinationId: result.destinationId,
         quickActions: result.quickActions
       };
 
@@ -153,8 +158,20 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                       ? "bg-rsu-green text-white rounded-tr-none" 
                       : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-gray-700"
                   )}>
-                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                    <div className="markdown-body">
+                      <Markdown>{msg.text}</Markdown>
+                    </div>
                     
+                    {msg.sender === 'bot' && msg.destinationId && (
+                      <button 
+                        onClick={() => onLocationFocus?.(msg.destinationId!)}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-black text-rsu-orange uppercase tracking-wider hover:opacity-70 transition-opacity"
+                      >
+                        <Bot size={14} className="animate-pulse" />
+                        Focus on Map
+                      </button>
+                    )}
+
                     {msg.quickActions && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.quickActions.map((action, idx) => (

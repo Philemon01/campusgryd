@@ -8,7 +8,8 @@ import {
   DoorOpen, 
   Trophy, 
   Library, 
-  MapPin 
+  MapPin,
+  BookOpen
 } from 'lucide-react';
 import { cn } from './utils';
 
@@ -16,6 +17,7 @@ export const getCategoryIcon = (type: string) => {
   switch (type) {
     case 'faculty': return <GraduationCap size={18} />;
     case 'college': return <GraduationCap size={18} />;
+    case 'department': return <BookOpen size={18} />;
     case 'admin': return <Building2 size={18} />;
     case 'hostel': return <Home size={18} />;
     case 'food': return <Utensils size={18} />;

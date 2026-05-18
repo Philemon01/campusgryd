@@ -66,11 +66,12 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   const [view, setView] = useState<'browse' | 'setup' | 'entry_mode' | 'create' | 'manual' | 'review'>('browse');
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [selectedTimetable, setSelectedTimetable] = useState<Timetable | null>(null);
+  const [currentSync, setCurrentSync] = useState<{ id: string, eventIds: string[] } | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
-  const [userRole, setUserRole] = useState<'admin' | 'student'>('student');
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const [metadata, setMetadata] = useState({
     faculty: "",
@@ -93,12 +94,46 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     fetchTimetables();
   }, []);
 
+  useEffect(() => {
+    const checkSync = async () => {
+      if (selectedTimetable && auth.currentUser) {
+        try {
+          const q = query(
+            collection(db, 'user_syncs'),
+            where('userId', '==', auth.currentUser.uid),
+            where('timetableId', '==', selectedTimetable.id)
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            setCurrentSync({ 
+              id: snapshot.docs[0].id, 
+              eventIds: data.eventIds || [] 
+            });
+          } else {
+            setCurrentSync(null);
+          }
+        } catch (error) {
+          console.error("Error checking sync status:", error);
+        }
+      }
+    };
+    checkSync();
+  }, [selectedTimetable, auth.currentUser]);
+
   const handleStartCreation = async () => {
+    if (isSigningIn) return;
     if (!auth.currentUser) {
+      setIsSigningIn(true);
       try {
         await signInWithPopup(auth, googleProvider);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.code === 'auth/popup-blocked') {
+          alert("Sign-in popup blocked. Please allow popups for this site.");
+        }
         return;
+      } finally {
+        setIsSigningIn(false);
       }
     }
     setView('setup');
@@ -107,10 +142,17 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   const fetchTimetables = async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, 'timetables'), where('status', '==', 'published'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'timetables'), where('status', '==', 'published'));
       const snapshot = await getDocs(q);
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
-      setTimetables(list);
+      
+      const sortedList = list.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      setTimetables(sortedList);
     } catch (error) {
       console.error("Error fetching timetables:", error);
     } finally {
@@ -145,19 +187,47 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
 
-      // Merge AI slots with metadata from setup
-      const parsedSlots = data.slots.map((s: any) => ({
-        ...s,
-        // Match venue 
-      }));
+      const contentType = res.headers.get("content-type");
+      const responseText = await res.text();
+
+      if (!res.ok) {
+        let errorData;
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { error: responseText };
+          }
+        } else {
+          throw new Error(`Server error: ${res.status}`);
+        }
+        throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+      }
+
+      const data = JSON.parse(responseText);
+      
+      if (!data.slots || !Array.isArray(data.slots)) {
+        console.error("AI returned malformed data:", data);
+        throw new Error("The AI couldn't find a clear timetable structure in this file. Please try a clearer image.");
+      }
+
+      const parsedSlots = data.slots.map((s: any) => {
+        const venue = s.venue || "";
+        const matchedLoc = locations.find(l => 
+          l.officialName.toLowerCase().includes(venue.toLowerCase()) ||
+          l.aliases.some(a => a.toLowerCase().includes(venue.toLowerCase()))
+        );
+        return {
+          ...s,
+          locationId: matchedLoc?.id
+        };
+      });
       setSlots(parsedSlots);
       setView('review');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Parsing error:", error);
-      alert("Failed to parse. Please try the manual entry instead.");
+      alert("Failed to parse: " + error.message);
       setView('setup');
     } finally {
       setIsUploading(false);
@@ -165,39 +235,70 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   };
 
   const saveTimetable = async () => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      alert("Please sign in to publish.");
+      return;
+    }
     
+    if (slots.length === 0) {
+      alert("Please add at least one class.");
+      return;
+    }
+
     setIsLoading(true);
     try {
+      if (!metadata.faculty || !metadata.department || !metadata.level) {
+        throw new Error("Please complete the faculty, department, and level fields.");
+      }
+
       const tRef = await addDoc(collection(db, 'timetables'), {
-        ...metadata,
+        faculty: metadata.faculty,
+        department: metadata.department,
+        level: metadata.level,
+        semester: metadata.semester || "1st",
         creatorId: auth.currentUser.uid,
-        creatorEmail: auth.currentUser.email,
+        creatorEmail: auth.currentUser.email || 'anonymous',
         status: 'published',
         createdAt: new Date().toISOString()
       });
 
-      for (const slot of slots) {
-        await addDoc(collection(db, 'timetables', tRef.id, 'slots'), slot);
-      }
+      const slotPromises = slots.map(slot => 
+        addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
+          courseCode: slot.courseCode || "N/A",
+          courseTitle: slot.courseTitle || "",
+          lecturer: slot.lecturer || "",
+          day: slot.day,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          venue: slot.venue || "TBA",
+          locationId: slot.locationId || null,
+          createdAt: new Date().toISOString()
+        })
+      );
 
-      alert("Timetable published!");
+      await Promise.all(slotPromises);
+      setTimeout(() => fetchTimetables(), 1000);
+
+      alert("🎉 Timetable published successfully!");
       setView('browse');
-      fetchTimetables();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Save error:", error);
+      alert("Failed to publish: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSyncToCalendar = async () => {
-    setSyncStatus('syncing');
+    if (isSigningIn || !auth.currentUser) return;
     try {
+      setIsSigningIn(true);
       const result = await signInWithPopup(auth, googleProvider);
+      setIsSigningIn(false);
+      setSyncStatus('syncing');
+      
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const accessToken = credential?.accessToken;
-
       if (!accessToken) throw new Error('Failed to get access token');
       
       const res = await fetch('/api/calendar/sync', {
@@ -206,25 +307,89 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         body: JSON.stringify({ accessToken, slots })
       });
       
+      if (!res.ok) throw new Error("Sync API failed");
+
       const data = await res.json();
       if (data.success) {
         setSyncStatus('success');
         if (selectedTimetable && auth.currentUser) {
-          await addDoc(collection(db, 'user_syncs'), {
-            userId: auth.currentUser.uid,
-            timetableId: selectedTimetable.id,
-            lastSyncedAt: new Date().toISOString()
-          });
+          const eventIds = data.events?.map((e: any) => e.id) || [];
+          const q = query(
+            collection(db, 'user_syncs'),
+            where('userId', '==', auth.currentUser.uid),
+            where('timetableId', '==', selectedTimetable.id)
+          );
+          const snap = await getDocs(q);
+          let syncDocId = "";
+          if (!snap.empty) {
+            syncDocId = snap.docs[0].id;
+            await updateDoc(doc(db, 'user_syncs', syncDocId), { eventIds, lastSyncedAt: new Date().toISOString() });
+          } else {
+            const newDoc = await addDoc(collection(db, 'user_syncs'), {
+              userId: auth.currentUser.uid,
+              timetableId: selectedTimetable.id,
+              eventIds,
+              lastSyncedAt: new Date().toISOString()
+            });
+            syncDocId = newDoc.id;
+          }
+          setCurrentSync({ id: syncDocId, eventIds });
         }
+        alert("🎉 Lectures synced to your Google Calendar!");
         setTimeout(() => setSyncStatus('idle'), 3000);
-      } else {
-        throw new Error(data.error);
       }
     } catch (error: any) {
-      console.error("Sync error:", error);
-      if (error.code !== 'auth/popup-closed-by-user') alert("Failed: " + error.message);
+      setIsSigningIn(false);
+      setSyncStatus('error');
+      if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
+        alert("Sync Failed: " + (error.message || "Please try again."));
+      }
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handleRemoveSync = async () => {
+    if (isSigningIn || !auth.currentUser || !currentSync) return;
+    if (!window.confirm("Remove synced entries from your Google Calendar?")) return;
+
+    try {
+      setIsSigningIn(true);
+      const authResult = await signInWithPopup(auth, googleProvider);
+      setIsSigningIn(false);
+      setSyncStatus('syncing');
+      
+      const credential = GoogleAuthProvider.credentialFromResult(authResult);
+      const accessToken = credential?.accessToken;
+      if (!accessToken) throw new Error('Failed to get access token');
+      
+      await fetch('/api/calendar/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, eventIds: currentSync.eventIds })
+      });
+
+      await deleteDoc(doc(db, 'user_syncs', currentSync.id));
+      setCurrentSync(null);
+      setSyncStatus('idle');
+      alert("Successfully removed from calendar.");
+    } catch (error: any) {
+      setIsSigningIn(false);
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handleDeleteTimetable = async (t: Timetable) => {
+    if (!window.confirm("Permanently delete this timetable?")) return;
+    try {
+      setIsLoading(true);
+      await deleteDoc(doc(db, 'timetables', t.id));
+      alert("Timetable deleted successfully.");
+      fetchTimetables();
+    } catch (err: any) {
+      alert("Delete failed: " + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -235,7 +400,6 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       exit={{ opacity: 0, x: '100%' }}
       className="fixed inset-0 z-[100] bg-rsu-bg md:inset-auto md:right-4 md:bottom-4 md:w-96 md:h-[700px] md:rounded-3xl shadow-2xl flex flex-col border border-rsu-border/20"
     >
-      {/* Header */}
       <div className="p-6 border-b border-rsu-border/20 flex items-center justify-between bg-rsu-navy text-white md:rounded-t-3xl shadow-lg">
         <div className="flex items-center gap-3">
           <BookOpen className="w-6 h-6 text-rsu-orange" />
@@ -252,14 +416,13 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
           <div className="p-4 space-y-4">
             <button 
               onClick={handleStartCreation}
-              className="w-full bg-rsu-orange text-white rounded-2xl p-6 flex items-center justify-between shadow-lg shadow-rsu-orange/20 active:scale-95 transition-all group overflow-hidden relative"
+              className="w-full bg-rsu-orange text-white rounded-2xl p-6 flex items-center justify-between shadow-lg active:scale-95 transition-all group"
             >
-              <div className="relative z-10 text-left">
+              <div className="text-left">
                 <p className="text-lg font-black italic uppercase tracking-tighter">Add New Entry</p>
-                <p className="text-[10px] font-bold opacity-80 decoration-white/20 uppercase tracking-widest">Select Department • Create Level</p>
+                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Select Dept • Create Level</p>
               </div>
-              <div className="p-3 bg-white/20 rounded-xl relative z-10"><Upload className="w-6 h-6" /></div>
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><BookOpen size={64} /></div>
+              <Upload className="w-6 h-6" />
             </button>
 
             <div className="pt-2">
@@ -268,24 +431,26 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                 <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-rsu-orange border-t-transparent rounded-full animate-spin" /></div>
               ) : timetables.length > 0 ? (
                 timetables.map(t => (
-                  <button 
-                    key={t.id}
-                    onClick={() => { setSelectedTimetable(t); fetchSlots(t.id); setView('review'); }}
-                    className="w-full text-left bg-white rounded-2xl p-4 mb-3 border border-rsu-border/5 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
-                  >
-                    <div>
-                      <h4 className="font-black text-rsu-navy text-sm uppercase">{t.faculty}</h4>
-                      <p className="text-[11px] text-rsu-muted font-bold">
-                        {t.department} • {t.level}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-rsu-orange group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  <div key={t.id} className="relative group">
+                    <button 
+                      onClick={() => { setSelectedTimetable(t); fetchSlots(t.id); setView('review'); }}
+                      className="w-full text-left bg-rsu-card rounded-2xl p-4 mb-3 border border-rsu-border/5 shadow-sm hover:shadow-md transition-all flex items-center justify-between"
+                    >
+                      <div>
+                        <h4 className="font-black text-rsu-text text-sm uppercase">{t.faculty}</h4>
+                        <p className="text-[11px] text-rsu-muted font-bold">{t.department} • {t.level}</p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-rsu-orange" />
+                    </button>
+                    {auth.currentUser?.uid === t.creatorId && (
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteTimetable(t); }} className="absolute right-12 top-1/2 -translate-y-1/2 p-2 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-4 h-4" /></button>
+                    )}
+                  </div>
                 ))
               ) : (
                 <div className="text-center py-10 opacity-30">
                   <FileText className="w-12 h-12 mx-auto mb-2" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">No timetables found</p>
+                  <p className="text-[10px] font-black uppercase">No timetables found</p>
                 </div>
               )}
             </div>
@@ -294,315 +459,152 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
         {view === 'setup' && (
           <div className="p-6 space-y-6">
+            <h3 className="text-2xl font-black italic text-rsu-text uppercase tracking-tighter">Create Entry</h3>
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-rsu-orange text-[10px] font-black uppercase tracking-[0.2em] mb-2 px-1">
-                <Check className="w-3 h-3" /> Step 1: Info
+              <div>
+                <label className="text-[11px] font-black text-rsu-muted uppercase tracking-widest block mb-1">Faculty</label>
+                <select 
+                  className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all appearance-none cursor-pointer"
+                  value={metadata.faculty}
+                  onChange={(e) => setMetadata({...metadata, faculty: e.target.value, department: ""})}
+                >
+                  <option value="">Select Faculty...</option>
+                  {RSU_FACULTIES.map(f => <option key={f} value={f} className="text-rsu-text bg-rsu-card">{f}</option>)}
+                </select>
               </div>
-              <h3 className="text-2xl font-black italic text-rsu-navy uppercase tracking-tighter leading-none mb-6">Create Entry</h3>
-              
-              <div className="space-y-4">
+              {metadata.faculty && (
                 <div>
-                  <label className="text-[10px] font-black text-rsu-navy/40 uppercase tracking-widest ml-1 mb-1 block">Faculty</label>
+                  <label className="text-[11px] font-black text-rsu-muted uppercase tracking-widest block mb-1">Department</label>
                   <select 
-                    className="w-full bg-white border border-rsu-border/20 rounded-xl p-4 font-bold text-sm shadow-sm ring-rsu-orange/20 focus:ring-4 transition-all"
-                    value={metadata.faculty}
-                    onChange={(e) => setMetadata({...metadata, faculty: e.target.value, department: ""})}
+                    className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all appearance-none cursor-pointer"
+                    value={metadata.department}
+                    onChange={(e) => setMetadata({...metadata, department: e.target.value})}
                   >
-                    <option value="">Select Faculty...</option>
-                    {RSU_FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    <option value="">Select Department...</option>
+                    {(RSU_DEPARTMENTS[metadata.faculty] || []).map(d => <option key={d} value={d} className="text-rsu-text bg-rsu-card">{d}</option>)}
+                    <option value="Other">Other</option>
                   </select>
                 </div>
-
-                {metadata.faculty && (
-                  <div>
-                    <label className="text-[10px] font-black text-rsu-navy/40 uppercase tracking-widest ml-1 mb-1 block">Department</label>
-                    <select 
-                      className="w-full bg-white border border-rsu-border/20 rounded-xl p-4 font-bold text-sm shadow-sm ring-rsu-orange/20 focus:ring-4 transition-all mb-3"
-                      value={metadata.department && !RSU_DEPARTMENTS[metadata.faculty]?.includes(metadata.department) ? "Other" : metadata.department}
-                      onChange={(e) => {
-                        if (e.target.value === "Other") {
-                          setMetadata({...metadata, department: ""});
-                        } else {
-                          setMetadata({...metadata, department: e.target.value});
-                        }
-                      }}
-                    >
-                      <option value="">Select Department...</option>
-                      {(RSU_DEPARTMENTS[metadata.faculty] || []).map(d => <option key={d} value={d}>{d}</option>)}
-                      <option value="Other">Other (Manual Entry)</option>
-                    </select>
-                    
-                    {(!RSU_DEPARTMENTS[metadata.faculty]?.includes(metadata.department) && metadata.department !== "") || 
-                     (metadata.faculty && !RSU_DEPARTMENTS[metadata.faculty]?.includes(metadata.department)) ? (
-                      <input 
-                        className="w-full bg-white border border-rsu-orange/30 rounded-xl p-4 font-bold text-sm shadow-inner focus:ring-4 ring-rsu-orange/20 transition-all"
-                        placeholder="Type Department Name..."
-                        value={metadata.department}
-                        onChange={(e) => setMetadata({...metadata, department: e.target.value})}
-                      />
-                    ) : null}
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-[10px] font-black text-rsu-navy/40 uppercase tracking-widest ml-1 mb-1 block">Level</label>
-                  <input 
-                    className="w-full bg-white border border-rsu-border/20 rounded-xl p-4 font-bold text-sm shadow-sm ring-rsu-orange/20 focus:ring-4 transition-all uppercase"
-                    placeholder="e.g. 100L"
-                    value={metadata.level}
-                    onChange={(e) => setMetadata({...metadata, level: e.target.value.toUpperCase()})}
-                  />
-                </div>
+              )}
+              <div>
+                <label className="text-[11px] font-black text-rsu-muted uppercase tracking-widest block mb-1">Level</label>
+                <input 
+                  className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange tracking-widest uppercase transition-all"
+                  placeholder="EX: 300L"
+                  value={metadata.level}
+                  onChange={(e) => setMetadata({...metadata, level: e.target.value})}
+                />
               </div>
             </div>
-
             <button 
-              disabled={!metadata.faculty || !metadata.department || !metadata.level}
+              disabled={!metadata.faculty || !metadata.level}
               onClick={() => setView('entry_mode')}
-              className="w-full bg-rsu-navy text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl disabled:opacity-30 transition-all hover:bg-black active:scale-95 flex items-center justify-center gap-2"
-            >
-              Next Step <ChevronRight className="w-5 h-5" />
-            </button>
+              className="w-full bg-rsu-navy text-white py-5 rounded-2xl font-black uppercase tracking-widest disabled:opacity-30"
+            >Next Step</button>
           </div>
         )}
 
         {view === 'entry_mode' && (
-          <div className="p-6 space-y-6 h-full flex flex-col justify-center">
-            <div className="text-center space-y-2 mb-4">
-              <h3 className="text-2xl font-black italic text-rsu-navy uppercase tracking-tighter leading-none">Entry Type</h3>
-              <p className="text-[11px] font-bold text-rsu-muted uppercase tracking-widest">How would you like to add the schedule?</p>
-            </div>
-
-            <button 
-              onClick={() => setView('create')}
-              className="w-full bg-white border-2 border-rsu-orange/20 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-orange hover:bg-rsu-orange/5 transition-all shadow-sm"
-            >
-              <div className="p-4 bg-rsu-orange text-white rounded-2xl group-hover:scale-110 transition-transform"><BookOpen size={30} /></div>
-              <div className="text-left">
-                <p className="text-lg font-black text-rsu-navy uppercase tracking-tighter italic">AI Vision</p>
-                <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest">Scan image or PDF</p>
-              </div>
+          <div className="p-6 space-y-4 h-full flex flex-col justify-center">
+            <button onClick={() => setView('create')} className="w-full bg-rsu-card border-2 border-rsu-orange/20 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-orange">
+              <div className="p-4 bg-rsu-orange text-white rounded-2xl"><BookOpen size={30} /></div>
+              <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">AI Vision</p></div>
             </button>
-
-            <button 
-              onClick={() => { setSlots([]); setView('manual'); }}
-              className="w-full bg-white border-2 border-rsu-navy/10 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-navy hover:bg-rsu-navy/5 transition-all shadow-sm"
-            >
-              <div className="p-4 bg-rsu-navy text-white rounded-2xl group-hover:scale-110 transition-transform"><FileText size={30} /></div>
-              <div className="text-left">
-                <p className="text-lg font-black text-rsu-navy uppercase tracking-tighter italic">Manual entry</p>
-                <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest">Type classes one by one</p>
-              </div>
+            <button onClick={() => { setSlots([]); setView('manual'); }} className="w-full bg-rsu-card border-2 border-rsu-navy/10 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-navy">
+              <div className="p-4 bg-rsu-navy text-white rounded-2xl"><FileText size={30} /></div>
+              <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">Manual entry</p></div>
             </button>
-
-            <button onClick={() => setView('setup')} className="text-[10px] font-black text-rsu-muted uppercase tracking-widest hover:text-rsu-navy transition-colors mt-4">Change Metadata</button>
           </div>
         )}
 
         {view === 'review' && (
           <div className="flex flex-col h-full bg-rsu-bg">
-            <div className="p-6 bg-white border-b border-rsu-border/10 shadow-sm relative z-20">
-              <div className="flex justify-between items-center mb-4">
-                <button onClick={() => setView('browse')} className="text-xs font-black text-rsu-orange flex items-center gap-1 uppercase tracking-widest">← Back</button>
-                <div className="bg-rsu-navy/5 px-2 py-1 rounded text-[9px] font-bold text-rsu-navy uppercase tracking-widest">Sync Dashboard</div>
-              </div>
-              <h3 className="text-xl font-black italic text-rsu-navy uppercase tracking-tighter leading-none">{metadata.department || selectedTimetable?.department}</h3>
-              <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest mt-1">{metadata.level || selectedTimetable?.level} • {metadata.semester || selectedTimetable?.semester} Semester</p>
-              
+            <div className="p-6 bg-rsu-card border-b border-rsu-border shadow-sm">
+              <button onClick={() => setView('browse')} className="text-xs font-black text-rsu-orange mb-4">← Back</button>
+              <h3 className="text-xl font-black italic text-rsu-text uppercase">{metadata.department || selectedTimetable?.department}</h3>
+              <p className="text-[10px] font-bold text-rsu-muted uppercase">{metadata.level || selectedTimetable?.level}</p>
               <button 
-                onClick={handleSyncToCalendar}
+                onClick={currentSync ? handleRemoveSync : handleSyncToCalendar}
                 disabled={syncStatus !== 'idle'}
                 className={cn(
-                  "w-full mt-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-lg",
-                  syncStatus === 'success' ? "bg-green-500 text-white" : "bg-rsu-navy text-white hover:bg-black shadow-rsu-navy/20"
+                  "w-full mt-6 py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3",
+                  currentSync ? "bg-red-500 text-white" : "bg-rsu-navy text-white"
                 )}
               >
-                {syncStatus === 'syncing' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Calendar className="w-4 h-4" />}
-                {syncStatus === 'success' ? 'Classes Linked!' : 'Sync to Google Calendar'}
+                {syncStatus === 'syncing' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : currentSync ? <Trash2 className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
+                {currentSync ? 'Remove Sync' : 'Sync to Calendar'}
               </button>
             </div>
-
-            <div className="flex-1 p-4 space-y-4 relative z-10">
-              <div className="text-[10px] font-black text-rsu-navy/30 uppercase tracking-[0.2em] mb-2 px-1">Curated Schedule ({slots.length} Classes)</div>
+            <div className="flex-1 p-4 space-y-4">
               {slots.map((slot, idx) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  key={idx} 
-                  className="bg-white rounded-3xl p-5 border border-rsu-border/20 shadow-sm hover:shadow-md transition-all relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-rsu-orange/5 rounded-full -mr-8 -mt-8" />
-                  <div className="flex justify-between items-start mb-4 relative z-10">
-                    <div className="bg-rsu-orange text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
-                      {slot.day}
-                    </div>
-                    <div className="text-[11px] font-black text-rsu-navy flex items-center gap-1.5 underline decoration-rsu-orange/30">
-                      <Clock className="w-3.5 h-3.5 text-rsu-orange" />
-                      {slot.startTime} — {slot.endTime}
+                <div key={idx} className="bg-rsu-card rounded-3xl p-5 border border-rsu-border shadow-sm">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-rsu-orange text-white px-3 py-1 rounded-full text-[9px] font-black uppercase">{slot.day}</div>
+                    <div className="text-[11px] font-black text-rsu-text flex items-center gap-1.5"><Clock size={14} className="text-rsu-orange" />{slot.startTime} - {slot.endTime}</div>
+                  </div>
+                  <h4 className="font-black text-rsu-text text-base uppercase mb-1">{slot.courseCode}</h4>
+                  <p className="text-[11px] font-bold text-rsu-muted uppercase truncate mb-4">{slot.courseTitle}</p>
+                  <div className="flex items-center justify-between border-t border-rsu-border pt-4">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-rsu-text/60 uppercase"><MapPin size={14} className="text-rsu-orange" />{slot.venue}</div>
+                    <div className="flex gap-2">
+                      <button onClick={() => {
+                        const v = slot.venue || "";
+                        const l = locations.find(loc => loc.officialName.toLowerCase().includes(v.toLowerCase()) || loc.aliases.some(a => a.toLowerCase().includes(v.toLowerCase())));
+                        if (l) onNavigateTo(l.id); else alert("Loc not found: " + v);
+                      }} className="p-2 bg-rsu-bg rounded-xl"><MapPin className="text-rsu-orange w-4 h-4" /></button>
+                      <button onClick={() => setSlots(slots.filter((_, i) => i !== idx))} className="p-2 bg-red-50 text-red-500 rounded-xl"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
-                  <h4 className="font-black text-rsu-navy text-base leading-tight tracking-tight uppercase mb-1">{slot.courseCode}</h4>
-                  <p className="text-[11px] font-bold text-rsu-muted uppercase tracking-tight mb-4 leading-tight">{slot.courseTitle}</p>
-                  
-                  <div className="flex items-center justify-between border-t border-rsu-border/5 pt-4">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black text-rsu-navy/40 uppercase">
-                      <MapPin className="w-3.5 h-3.5 text-rsu-orange" />
-                      {slot.venue}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const loc = locations.find(l => 
-                          l.officialName.toLowerCase().includes(slot.venue.toLowerCase()) ||
-                          l.aliases.some(a => a.toLowerCase().includes(slot.venue.toLowerCase()))
-                        );
-                        if (loc) onNavigateTo(loc.id);
-                        else alert("Location not pinned. Use search to find " + slot.venue);
-                      }}
-                      className="p-2 bg-rsu-bg rounded-xl hover:bg-rsu-orange/10 transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4 text-rsu-orange" />
-                    </button>
-                  </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-
             {!selectedTimetable && (
-              <div className="p-6 bg-white border-t border-rsu-border/10">
-                <button 
-                  onClick={saveTimetable}
-                  className="w-full bg-rsu-orange text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 transition-all hover:bg-rsu-navy active:scale-95"
-                >
-                  <Save className="w-6 h-6" />
-                  Finalize & Publish
+              <div className="p-6 bg-rsu-card border-t border-rsu-border">
+                <button onClick={saveTimetable} disabled={isLoading} className="w-full bg-rsu-orange text-white py-5 rounded-2xl font-black uppercase">
+                  {isLoading ? 'Publishing...' : 'Finalize & Publish'}
                 </button>
               </div>
             )}
           </div>
         )}
+
         {view === 'create' && (
           <div className="p-8 flex flex-col items-center justify-center h-full text-center space-y-8">
-            <div className="w-24 h-24 bg-rsu-orange/10 rounded-full flex items-center justify-center relative">
-              <Upload className="w-10 h-10 text-rsu-orange animate-bounce" />
-              <div className="absolute inset-0 border-2 border-dashed border-rsu-orange/30 rounded-full animate-spin-slow" />
+            <Upload className="w-12 h-12 text-rsu-orange animate-bounce" />
+            <h3 className="text-2xl font-black italic text-rsu-text uppercase">AI Vision Sync</h3>
+            <div className="space-y-4 w-full">
+              <label className="w-full bg-rsu-orange text-white py-5 rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase cursor-pointer hover:bg-rsu-orange/90 transition-colors shadow-lg shadow-rsu-orange/20">
+                {isUploading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload className="w-5 h-5" /> Scan Timetable Image</>}
+                <input type="file" className="hidden" accept="image/jpeg,image/png,application/pdf" onChange={handleFileUpload} disabled={isUploading} />
+              </label>
+              <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest">Supports: JPG, PNG, PDF (Max 5MB)</p>
             </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black italic text-rsu-navy uppercase tracking-tighter">AI Vision Sync</h3>
-              <p className="text-[11px] font-bold text-rsu-muted uppercase tracking-widest leading-relaxed px-4">
-                Upload a clear photo of your paper timetable. Our AI will automatically map out the courses and locations.
-              </p>
-            </div>
-            
-            <label className="w-full bg-rsu-orange hover:bg-rsu-navy text-white transition-all py-5 rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest cursor-pointer shadow-xl shadow-rsu-orange/20 active:scale-95">
-              {isUploading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Upload className="w-5 h-5" />
-                  Ready to Scan
-                </>
-              )}
-              <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={isUploading} />
-            </label>
-            
-            <button 
-              onClick={() => setView('entry_mode')}
-              className="text-[10px] font-black text-rsu-muted uppercase tracking-widest hover:text-rsu-navy transition-colors"
-            >
-              Back to Methods
-            </button>
+            <button onClick={() => setView('entry_mode')} className="text-[10px] font-black text-rsu-muted underline uppercase">Back to selection</button>
           </div>
         )}
 
         {view === 'manual' && (
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black italic text-rsu-navy uppercase tracking-tighter underline decoration-rsu-orange/30">Add New Slot</h3>
-              <div className="bg-rsu-orange/10 text-rsu-orange text-[9px] font-black px-2 py-1 rounded uppercase">{slots.length} Ready</div>
-            </div>
-
-            <div className="space-y-4 bg-white p-6 rounded-3xl border border-rsu-border/20 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><FileText size={80} /></div>
-              
-              <div className="space-y-3 relative z-10">
-                <input 
-                  className="w-full bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                  placeholder="Course Code (e.g. CSC411)"
-                  value={manualSlot.courseCode}
-                  onChange={(e) => setManualSlot({...manualSlot, courseCode: e.target.value.toUpperCase()})}
-                />
-                <input 
-                  className="w-full bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                  placeholder="Course Title"
-                  value={manualSlot.courseTitle}
-                  onChange={(e) => setManualSlot({...manualSlot, courseTitle: e.target.value})}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <select 
-                    className="bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                    value={manualSlot.day}
-                    onChange={(e) => setManualSlot({...manualSlot, day: e.target.value})}
-                  >
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  <input 
-                    className="bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                    placeholder="Venue (e.g. LT1)"
-                    value={manualSlot.venue}
-                    onChange={(e) => setManualSlot({...manualSlot, venue: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input 
-                    type="time"
-                    className="bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                    value={manualSlot.startTime}
-                    onChange={(e) => setManualSlot({...manualSlot, startTime: e.target.value})}
-                  />
-                  <input 
-                    type="time"
-                    className="bg-rsu-bg border-none rounded-xl p-4 font-bold text-sm"
-                    value={manualSlot.endTime}
-                    onChange={(e) => setManualSlot({...manualSlot, endTime: e.target.value})}
-                  />
-                </div>
+          <div className="p-6 space-y-4">
+            <h3 className="text-xl font-black italic text-rsu-text uppercase">Add Slot</h3>
+            <div className="space-y-4">
+              <input className="w-full bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" placeholder="COURSE CODE" value={manualSlot.courseCode} onChange={e => setManualSlot({...manualSlot, courseCode: e.target.value.toUpperCase()})} />
+              <input className="w-full bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" placeholder="COURSE TITLE" value={manualSlot.courseTitle} onChange={e => setManualSlot({...manualSlot, courseTitle: e.target.value})} />
+              <div className="grid grid-cols-2 gap-3">
+                <select className="bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" value={manualSlot.day} onChange={e => setManualSlot({...manualSlot, day: e.target.value})}>
+                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(d => <option key={d} value={d} className="bg-rsu-card text-rsu-text">{d}</option>)}
+                </select>
+                <input className="bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" placeholder="VENUE" value={manualSlot.venue} onChange={e => setManualSlot({...manualSlot, venue: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="time" className="bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" value={manualSlot.startTime} onChange={e => setManualSlot({...manualSlot, startTime: e.target.value})} />
+                <input type="time" className="bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" value={manualSlot.endTime} onChange={e => setManualSlot({...manualSlot, endTime: e.target.value})} />
               </div>
             </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={() => {
-                  if(!manualSlot.courseCode || !manualSlot.venue) return;
-                  setSlots([...slots, manualSlot]);
-                  setManualSlot({
-                    ...manualSlot,
-                    courseCode: "",
-                    courseTitle: "",
-                    venue: ""
-                  });
-                }}
-                className="flex-1 bg-rsu-navy text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-lg shadow-rsu-navy/20"
-              >
-                Add Class
-              </button>
-              
-              <button 
-                disabled={slots.length === 0}
-                onClick={() => setView('review')}
-                className="flex-1 bg-rsu-orange text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-rsu-orange/20"
-              >
-                Review Map
-              </button>
-            </div>
-
-            <button onClick={() => setView('entry_mode')} className="w-full text-[10px] font-black text-rsu-muted uppercase tracking-widest text-center py-2">Change entry method</button>
+            <button onClick={() => { if(!manualSlot.courseCode) return; setSlots([...slots, manualSlot]); setManualSlot({...manualSlot, courseCode: "", courseTitle: "", venue: ""}); }} className="w-full bg-rsu-navy text-white py-4 rounded-xl font-black">Add Slot</button>
+            <button disabled={slots.length === 0} onClick={() => setView('review')} className="w-full bg-rsu-orange text-white py-4 rounded-xl font-black">Review & Map</button>
           </div>
         )}
       </div>
     </motion.div>
   );
 };
-

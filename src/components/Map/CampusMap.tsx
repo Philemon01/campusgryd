@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Polygon, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, ZoomControl, useMap, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Location } from '../../types';
 import { cn } from '../../lib/utils';
@@ -15,6 +15,7 @@ interface CampusMapProps {
   navigationPath: [number, number][] | null;
   mapFeatures?: any;
   onLocationSelect: (loc: Location) => void;
+  setStartLocation?: (loc: Location | null) => void;
   createCustomIcon: (type: string, isActive: boolean) => L.DivIcon;
 }
 
@@ -60,6 +61,7 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
   navigationPath,
   mapFeatures,
   onLocationSelect,
+  setStartLocation,
   createCustomIcon,
   onMapMove
 }) => {
@@ -103,7 +105,29 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
               onLocationSelect(loc);
             }
           }}
-        />
+        >
+          <Popup className="rsu-popup">
+            <div className="p-3 min-w-[200px]">
+              <h3 className="font-display font-black text-rsu-navy uppercase text-sm mb-1 leading-tight">{loc.officialName}</h3>
+              <p className="text-[9px] font-bold text-rsu-muted uppercase tracking-widest mb-3">{loc.type}</p>
+              
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => onLocationSelect(loc)}
+                  className="w-full bg-rsu-navy text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-black transition-all"
+                >
+                  Set as Destination
+                </button>
+                <button
+                  onClick={() => setStartLocation?.(loc)}
+                  className="w-full bg-white border border-rsu-navy text-rsu-navy py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rsu-navy/5 transition-all"
+                >
+                  Set as Start Point
+                </button>
+              </div>
+            </div>
+          </Popup>
+        </Marker>
       ))}
 
       {userLocation && (

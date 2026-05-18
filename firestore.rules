@@ -68,7 +68,9 @@ service cloud.firestore {
           && data.level is string
           && data.semester is string
           && data.creatorId == request.auth.uid
-          && data.status in ['published', 'draft'];
+          && data.status in ['published', 'draft']
+          && data.creatorEmail is string
+          && data.createdAt is string;
       }
 
       function isCreator() {
@@ -85,10 +87,10 @@ service cloud.firestore {
       // Slots
       match /slots/{slotId} {
         function isValidSlot(data) {
-          return data.courseCode is string && data.courseCode.size() <= 20
+          return data.courseCode is string && data.courseCode.size() <= 100
             && data.day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            && data.startTime.matches('^[0-9]{2}:[0-9]{2}$')
-            && data.endTime.matches('^[0-9]{2}:[0-9]{2}$');
+            && data.startTime is string
+            && data.endTime is string;
         }
 
         allow list: if isSignedIn() && (get(/databases/$(database)/documents/timetables/$(timetableId)).data.status == 'published' || get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid);

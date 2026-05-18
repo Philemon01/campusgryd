@@ -195,19 +195,19 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
       {/* Category Filters */}
       {!isNavigating && (
-        <div className="w-full max-w-md mt-3 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {(['all', 'faculty', 'college', 'admin', 'library', 'gate', 'facility'] as const).map(cat => (
+        <div className="w-full max-w-md mt-3 flex gap-2 overflow-x-auto pb-2 no-scrollbar px-2">
+          {(['all', 'faculty', 'college', 'department', 'admin', 'library', 'gate', 'facility'] as const).map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={cn(
-                "whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all shadow-sm border",
+                "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm border",
                 activeCategory === cat 
                   ? "bg-rsu-navy text-white border-rsu-navy" 
                   : "bg-rsu-card text-rsu-muted border-rsu-border hover:border-rsu-navy"
               )}
             >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {cat === 'department' ? 'Departments' : cat.charAt(0).toUpperCase() + cat.slice(1)}
             </button>
           ))}
         </div>
