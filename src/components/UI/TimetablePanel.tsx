@@ -292,19 +292,32 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         createdAt: new Date().toISOString()
       });
 
-      const slotPromises = slots.map(slot => 
-        addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
-          courseCode: slot.courseCode || "N/A",
-          courseTitle: slot.courseTitle || "",
-          lecturer: slot.lecturer || "",
-          day: slot.day,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          venue: slot.venue || "TBA",
+      const slotPromises = slots.map(slot => {
+        // Sanitize day to strictly match validDays: 'Monday' | 'Tuesday' | ...
+        let rawDay = (slot.day || "Monday").trim();
+        let cleanDay = rawDay.charAt(0).toUpperCase() + rawDay.slice(1).toLowerCase();
+        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        if (!validDays.includes(cleanDay)) {
+          const found = validDays.find(d => d.toLowerCase().startsWith(cleanDay.toLowerCase().substring(0, 3)));
+          cleanDay = found || "Monday";
+        }
+
+        const cleanStartTime = (slot.startTime || "08:00").trim();
+        const cleanEndTime = (slot.endTime || "10:00").trim();
+        const cleanCourseCode = (slot.courseCode || "N/A").trim() || "N/A";
+
+        return addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
+          courseCode: cleanCourseCode,
+          courseTitle: (slot.courseTitle || "").trim(),
+          lecturer: (slot.lecturer || "").trim(),
+          day: cleanDay,
+          startTime: cleanStartTime,
+          endTime: cleanEndTime,
+          venue: (slot.venue || "TBA").trim(),
           locationId: slot.locationId || null,
           createdAt: new Date().toISOString()
-        })
-      );
+        });
+      });
 
       await Promise.all(slotPromises);
       setTimeout(() => fetchTimetables(), 1000);
@@ -448,7 +461,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
-      className="fixed inset-0 z-[100] bg-rsu-bg md:inset-auto md:right-4 md:bottom-4 md:w-96 md:h-[700px] md:rounded-3xl shadow-2xl flex flex-col border border-rsu-border/20"
+      className="fixed inset-0 z-[100] bg-rsu-bg md:inset-auto md:right-4 md:bottom-4 md:w-96 md:h-[700px] md:max-h-[calc(100vh-32px)] md:rounded-3xl shadow-2xl flex flex-col border border-rsu-border/20"
     >
       <div className="p-6 border-b border-rsu-border/20 flex items-center justify-between bg-rsu-navy text-white md:rounded-t-3xl shadow-lg">
         <div className="flex items-center gap-3">

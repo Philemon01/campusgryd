@@ -891,7 +891,11 @@ export default function App() {
         userLocation={userLocation}
         navigationPath={navigationPath}
         mapFeatures={mapFeaturesData}
-        onLocationSelect={(loc) => setSelectedLocation(loc)}
+        onLocationSelect={(loc) => {
+          setSelectedLocation(loc);
+          setMapView({ center: loc.coordinates, zoom: 18 });
+          setIsFollowingUser(false);
+        }}
         setStartLocation={setStartLocation}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}

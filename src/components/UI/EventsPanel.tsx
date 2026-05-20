@@ -35,7 +35,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ onClose, onNavigateTo 
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
-      className="fixed inset-0 z-[100] bg-rsu-bg md:inset-auto md:right-4 md:bottom-4 md:w-96 md:h-[600px] md:rounded-3xl shadow-2xl flex flex-col"
+      className="fixed inset-0 z-[100] bg-rsu-bg md:inset-auto md:right-4 md:bottom-4 md:w-96 md:h-[600px] md:max-h-[calc(100vh-32px)] md:rounded-3xl shadow-2xl flex flex-col"
     >
       {/* Header */}
       <div className="p-6 border-b border-rsu-border/20 flex items-center justify-between bg-rsu-navy text-white md:rounded-t-3xl">
