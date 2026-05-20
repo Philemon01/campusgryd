@@ -197,15 +197,25 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
           try {
             errorData = JSON.parse(responseText);
           } catch {
-            errorData = { error: responseText };
+            errorData = { error: "Failed to parse error message from server." };
           }
         } else {
-          throw new Error(`Server error: ${res.status}`);
+          // If we got HTML (like a 404 or boilerplate), don't try to parse as JSON
+          if (responseText.trim().toLowerCase().startsWith("<!doctype") || responseText.trim().toLowerCase().startsWith("<html")) {
+            throw new Error(`The server returned an HTML page (status ${res.status}). This usually means the API route was not found or the server is restarting.`);
+          }
+          throw new Error(`Server error (${res.status}): ${responseText.substring(0, 50)}...`);
         }
         throw new Error(errorData.error || `Upload failed with status ${res.status}`);
       }
 
-      const data = JSON.parse(responseText);
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (err) {
+        console.error("Failed to parse JSON response:", responseText);
+        throw new Error("The AI returned a response that wasn't valid JSON. Please try again with a clearer image.");
+      }
       
       if (!data.slots || !Array.isArray(data.slots)) {
         console.error("AI returned malformed data:", data);

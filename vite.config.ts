@@ -52,7 +52,7 @@ export default defineConfig(({mode}) => {
       })
     ],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ""),
+      // Keys added here are exposed to the client. GEMINI_API_KEY must stay server-side only.
     },
     resolve: {
       alias: {

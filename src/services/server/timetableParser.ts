@@ -100,13 +100,27 @@ export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
   }
 
   try {
-    // Basic cleanup in case of markdown wrapping (though responseMimeType should prevent this)
-    const jsonStr = responseText.replace(/```json\s?|\s?```/g, '').trim();
+    // Robustly extract JSON from potential conversational wrapping
+    let jsonStr = responseText.trim();
+    
+    // If it's wrapped in markdown code blocks, extract the content
+    const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match) {
+      jsonStr = match[1];
+    } else {
+      // Fallback: search for first { and last }
+      const start = jsonStr.indexOf('{');
+      const end = jsonStr.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        jsonStr = jsonStr.substring(start, end + 1);
+      }
+    }
+
     const parsed = JSON.parse(jsonStr);
     console.log("Parsed Slots Count:", parsed.slots?.length);
     return parsed;
   } catch (e) {
     console.error("Failed to parse JSON from model. Raw text:", responseText);
-    throw new Error("The AI returned an invalid response format. Please try again or use manual entry.");
+    throw new Error("The AI returned a response that couldn't be correctly parsed as a timetable. Please try again with a clearer image or manually enter the data.");
   }
 }

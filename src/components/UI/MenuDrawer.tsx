@@ -15,6 +15,7 @@ interface MenuDrawerProps {
   toggleTimetable: () => void;
   user: any;
   onSignIn: () => void;
+  onSignInRedirect?: () => void;
   onSignOut: () => void;
 }
 
@@ -30,6 +31,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   toggleTimetable,
   user,
   onSignIn,
+  onSignInRedirect,
   onSignOut
 }) => {
   return (
@@ -71,16 +73,26 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                     <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-rsu-orange" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-rsu-navy truncate">{user.displayName}</p>
-                      <button onClick={onSignOut} className="text-[9px] font-bold text-red-500 uppercase tracking-widest hover:underline">Sign Out</button>
+                      <button onClick={onSignOut} className="text-[9px] font-bold text-red-500 uppercase tracking-widest hover:underline cursor-pointer">Sign Out</button>
                     </div>
                   </div>
                 ) : (
-                  <button 
-                    onClick={onSignIn}
-                    className="w-full py-3 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm"
-                  >
-                    Sync Your Account
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={onSignIn}
+                      className="w-full py-2.5 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm cursor-pointer"
+                    >
+                      Sync with Popup
+                    </button>
+                    {onSignInRedirect && (
+                      <button 
+                        onClick={onSignInRedirect}
+                        className="w-full py-2.5 bg-rsu-navy text-white border-2 border-rsu-navy rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rsu-orange hover:border-rsu-orange transition-all shadow-md cursor-pointer text-center"
+                      >
+                        Sync with Redirect
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

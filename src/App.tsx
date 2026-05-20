@@ -29,7 +29,7 @@ import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db, auth, googleProvider } from './lib/firebase';
-import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User, getRedirectResult } from 'firebase/auth';
 import { FeatureCollection } from 'geojson';
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark' | 'department';
@@ -49,6 +49,7 @@ export default function App() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isSatelliteView, setIsSatelliteView] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' | 'success' } | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -110,21 +111,58 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
+
+    // Capture the result of a signInWithRedirect redirect flow on mount
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setNotification({ message: `Successfully synced with Google: ${result.user.displayName}`, type: 'success' });
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect login result failed:", error);
+        if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain') || error.code?.includes('unauthorized')) {
+          const domain = typeof window !== 'undefined' ? window.location.hostname : 'your-vercel-domain.vercel.app';
+          setUnauthorizedDomain(domain);
+        } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+          setNotification({ message: `Sign-in redirect failed: ${error.message || error}`, type: 'error' });
+        }
+      });
+
     return () => unsubscribe();
   }, []);
 
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (useRedirect: boolean = false) => {
     if (isSigningIn) return;
     setIsSigningIn(true);
+    
+    // Auto-detect iframe context which strictly blocks popup sign-ins
+    const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+    if (useRedirect || isIframe) {
+      try {
+        setNotification({ message: "Redirecting to Google Sign-In...", type: 'info' });
+        await signInWithRedirect(auth, googleProvider);
+      } catch (error: any) {
+        console.error("Firebase Redirect failed:", error);
+        setNotification({ message: "Could not initialize redirect: " + error.message, type: 'error' });
+        setIsSigningIn(false);
+      }
+      return;
+    }
+
     try {
       await signInWithPopup(auth, googleProvider);
       setNotification({ message: "Signed in successfully!", type: 'success' });
     } catch (error: any) {
       console.error("Auth error:", error.code, error.message);
-      if (error.code === 'auth/popup-blocked') {
-        setNotification({ message: "Sign-in popup blocked. Please allow popups for this site.", type: 'error' });
+      if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain') || error.code?.includes('unauthorized')) {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'your-vercel-domain.vercel.app';
+        setUnauthorizedDomain(domain);
+      } else if (error.code === 'auth/popup-blocked') {
+        setNotification({ message: "Sign-in popup blocked. Please allow popups or use the Redirect option instead.", type: 'error' });
       } else if (error.code === 'auth/cancelled-popup-request') {
         // Silently ignore or show minor info
       } else if (error.code !== 'auth/popup-closed-by-user') {
@@ -948,7 +986,8 @@ export default function App() {
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
         toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)}
         user={currentUser}
-        onSignIn={handleSignIn}
+        onSignIn={() => handleSignIn(false)}
+        onSignInRedirect={() => handleSignIn(true)}
         onSignOut={handleSignOut}
       />
 
@@ -997,6 +1036,89 @@ export default function App() {
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
             Offline Mode: Using cached map data
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {unauthorizedDomain && (
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative"
+            >
+              <button
+                onClick={() => setUnauthorizedDomain(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                id="close-unauth-modal"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 bg-rsu-orange/10 text-rsu-orange rounded-full flex items-center justify-center font-bold text-xl">
+                  ⚠️
+                </div>
+                <h3 className="font-display font-black text-xl text-rsu-navy dark:text-white uppercase tracking-tight">
+                  Vercel Domain Authorization Needed
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  You successfully hosted the Campus Navigator on Vercel! To allow Google Sign-In popups, this domain must be whitelisted in your Firebase configuration.
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Vercel Domain</label>
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="font-mono font-bold select-all overflow-x-auto whitespace-nowrap no-scrollbar flex-1 text-rsu-navy dark:text-slate-100">
+                      {unauthorizedDomain}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(unauthorizedDomain);
+                        setNotification({ message: "Domain URL copied to clipboard!", type: 'success' });
+                      }}
+                      className="text-[10px] font-bold text-rsu-orange uppercase bg-rsu-orange/10 hover:bg-rsu-orange/20 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rsu-green text-white flex items-center justify-center font-bold text-[10px] shrink-0">1</span>
+                    <p className="text-slate-600 dark:text-slate-300">
+                      Go to your <strong>Firebase Console</strong> &rarr; <strong>Authentication</strong> &rarr; <strong>Settings</strong> &rarr; <strong>Authorized Domains</strong>.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rsu-green text-white flex items-center justify-center font-bold text-[10px] shrink-0">2</span>
+                    <p className="text-slate-600 dark:text-slate-300">
+                      Click <strong>Add domain</strong> and paste <code>{unauthorizedDomain}</code>.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rsu-green text-white flex items-center justify-center font-bold text-[10px] shrink-0">3</span>
+                    <p className="text-slate-600 dark:text-slate-300 text-[11px]">
+                      Open <strong>Google Cloud Console &rarr; API Credentials &rarr; OAuth 2.0 Web Client</strong>, and add <code>https://{unauthorizedDomain}</code> to <strong>Authorized JavaScript origins</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setUnauthorizedDomain(null)}
+                  className="flex-1 bg-rsu-navy hover:bg-rsu-navy/90 text-white font-black text-xs uppercase py-3.5 rounded-xl transition-colors tracking-widest cursor-pointer"
+                >
+                  Got it
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
