@@ -31,12 +31,12 @@ export class GeminiChatService {
     }
   }
 
-  async parseIntent(message: string): Promise<ChatIntent> {
+  async parseIntent(message: string, timetable?: any[], events?: any[]): Promise<ChatIntent> {
     try {
       const response = await fetch('/api/chat/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, locations: this.locations }),
+        body: JSON.stringify({ message, locations: this.locations, timetable, events }),
       });
       
       const contentType = response.headers.get("content-type");
@@ -65,7 +65,9 @@ export class GeminiChatService {
       distance?: number, 
       currentStep?: string, 
       isLastStep?: boolean,
-      phase: 'clarification' | 'selection' | 'guidance' | 'completion' | 'idle'
+      phase: 'clarification' | 'selection' | 'guidance' | 'completion' | 'idle',
+      timetable?: any[],
+      events?: any[]
     }
   ): Promise<string> {
     try {

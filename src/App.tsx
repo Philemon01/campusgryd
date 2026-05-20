@@ -7,6 +7,7 @@ import {
   Info
 } from 'lucide-react';
 import { locations } from './data/locations';
+import { campusEvents } from './data/events';
 import mapFeaturesData from './data/rsu-map-features.json';
 import { Location, Maneuver, RouteOption } from './types';
 import { cn } from './lib/utils';
@@ -27,7 +28,7 @@ import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db, auth, googleProvider, setCachedAccessToken, getCachedAccessToken } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { FeatureCollection } from 'geojson';
@@ -72,6 +73,7 @@ export default function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userSlots, setUserSlots] = useState<any[]>([]);
   const [navSession, setNavSession] = useState<{
     phase: 'idle' | 'clarification' | 'selection' | 'guidance' | 'completion';
     destinationId: string | null;
@@ -138,6 +140,43 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setUserSlots([]);
+      return;
+    }
+
+    const qSync = query(
+      collection(db, 'user_syncs'),
+      where('userId', '==', currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(qSync, async (snapshot) => {
+      try {
+        const slotsList: any[] = [];
+        for (const docSnap of snapshot.docs) {
+          const syncData = docSnap.data();
+          if (syncData.timetableId) {
+            const qSlots = collection(db, 'timetables', syncData.timetableId, 'slots');
+            const slotsSnap = await getDocs(qSlots);
+            slotsSnap.forEach((slotDoc) => {
+              slotsList.push({
+                id: slotDoc.id,
+                ...slotDoc.data(),
+                timetableId: syncData.timetableId
+              });
+            });
+          }
+        }
+        setUserSlots(slotsList);
+      } catch (err) {
+        console.error("Error fetching slots for chatbot context:", err);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const [isSigningIn, setIsSigningIn] = useState(false);
 
@@ -735,7 +774,7 @@ export default function App() {
   };
 
   const handleChatMessage = async (text: string) => {
-    const intent = await chatService.parseIntent(text);
+    const intent = await chatService.parseIntent(text, userSlots, campusEvents);
     let calculatedDistance: number | undefined = undefined;
     let nextPhase = navSession.phase;
     let updatedSession = { ...navSession };
@@ -838,7 +877,9 @@ export default function App() {
       distance: calculatedDistance,
       currentStep: currentStepInstruction,
       isLastStep: updatedSession.currentStepIndex === maneuvers.length - 1 && maneuvers.length > 0,
-      phase: updatedSession.phase
+      phase: updatedSession.phase,
+      timetable: userSlots,
+      events: campusEvents,
     });
 
     if (isVoiceAssistEnabled && response) {

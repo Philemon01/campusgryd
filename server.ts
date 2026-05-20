@@ -80,8 +80,8 @@ app.get("/api/health", (req, res) => {
 app.post("/api/chat/intent", async (req, res) => {
   console.log("POST /api/chat/intent");
   try {
-    const { message, locations } = req.body;
-    const result = await parseCampusIntent(message, locations);
+    const { message, locations, timetable, events } = req.body;
+    const result = await parseCampusIntent(message, locations, timetable, events);
     res.json(result);
   } catch (error: any) {
     console.error("Intent error:", error);
