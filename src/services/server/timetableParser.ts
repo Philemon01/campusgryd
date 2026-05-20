@@ -68,7 +68,7 @@ export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
   try {
     console.log(`Phase: AI Vision parsing started for ${mimeType}`);
     result = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: {
         parts: [
           { text: prompt },

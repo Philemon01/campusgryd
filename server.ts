@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import multer from "multer";
-import { createServer as createViteServer } from "vite";
 import { parseTimetable } from "./src/services/server/timetableParser";
 import { syncToGoogleCalendar, deleteFromGoogleCalendar } from "./src/services/server/calendarService";
 import { handleCampusChat, parseCampusIntent } from "./src/services/server/chatService";
@@ -172,6 +171,7 @@ if (!process.env.VERCEL) {
   async function startServer() {
     // Vite Middleware
     if (process.env.NODE_ENV !== "production") {
+      const { createServer: createViteServer } = await import("vite");
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
