@@ -16,10 +16,14 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     
     if (config.startsWith('{')) {
       serviceAccount = JSON.parse(config);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      console.log("Firebase Admin initialized successfully.");
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+        console.log("Firebase Admin initialized successfully.");
+      } else {
+        console.log("Firebase Admin already initialized.");
+      }
     } else {
       console.warn("FIREBASE_SERVICE_ACCOUNT is set but does not appear to be a JSON string");
     }
