@@ -705,7 +705,9 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                         const l = locations.find(loc => loc.officialName.toLowerCase().includes(v.toLowerCase()) || loc.aliases.some(a => a.toLowerCase().includes(v.toLowerCase())));
                         if (l) onNavigateTo(l.id); else alert("Loc not found: " + v);
                       }} className="p-2 bg-rsu-bg rounded-xl"><MapPin className="text-rsu-orange w-4 h-4" /></button>
-                      <button onClick={() => setSlots(slots.filter((_, i) => i !== idx))} className="p-2 bg-red-50 text-red-500 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                      {(!selectedTimetable || selectedTimetable.creatorId === currentUser?.uid) && (
+                        <button onClick={() => setSlots(slots.filter((_, i) => i !== idx))} className="p-2 bg-red-50 text-red-500 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                      )}
                     </div>
                   </div>
                 </div>
