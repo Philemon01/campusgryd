@@ -28,8 +28,8 @@ import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db, auth, googleProvider } from './lib/firebase';
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User, getRedirectResult } from 'firebase/auth';
+import { db, auth, googleProvider, setCachedAccessToken, getCachedAccessToken } from './lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { FeatureCollection } from 'geojson';
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark' | 'department';
@@ -110,12 +110,19 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      if (!user) {
+        setCachedAccessToken(null);
+      }
     });
 
     // Capture the result of a signInWithRedirect redirect flow on mount
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          if (credential?.accessToken) {
+            setCachedAccessToken(credential.accessToken);
+          }
           setNotification({ message: `Successfully synced with Google: ${result.user.displayName}`, type: 'success' });
         }
       })
@@ -154,7 +161,11 @@ export default function App() {
     }
 
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setCachedAccessToken(credential.accessToken);
+      }
       setNotification({ message: "Signed in successfully!", type: 'success' });
     } catch (error: any) {
       console.error("Auth error:", error.code, error.message);
@@ -176,6 +187,7 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
+      setCachedAccessToken(null);
       setNotification({ message: "Signed out safely.", type: 'info' });
     } catch (error: any) {
       setNotification({ message: "Sign out failed.", type: 'error' });
@@ -950,6 +962,7 @@ export default function App() {
           <TimetablePanel 
             onClose={() => setIsTimetableOpen(false)}
             onNavigateTo={handleEventNavigation}
+            currentUser={currentUser}
           />
         )}
       </AnimatePresence>

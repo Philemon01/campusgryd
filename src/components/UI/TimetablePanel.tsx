@@ -16,8 +16,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { db, auth, googleProvider } from '../../lib/firebase';
+import { signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
+import { db, auth, googleProvider, getCachedAccessToken, setCachedAccessToken } from '../../lib/firebase';
 import { locations } from '../../data/locations';
 import { cn } from '../../lib/utils';
 
@@ -46,6 +46,7 @@ interface Timetable {
 interface TimetablePanelProps {
   onClose: () => void;
   onNavigateTo: (locationId: string) => void;
+  currentUser: User | null;
 }
 
 const RSU_FACULTIES = [
@@ -62,7 +63,7 @@ const RSU_DEPARTMENTS: Record<string, string[]> = {
   "Law": ["Public Law", "Private Law", "Commercial Law"],
 };
 
-export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavigateTo }) => {
+export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavigateTo, currentUser }) => {
   const [view, setView] = useState<'browse' | 'setup' | 'entry_mode' | 'create' | 'manual' | 'review'>('browse');
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [selectedTimetable, setSelectedTimetable] = useState<Timetable | null>(null);
@@ -72,6 +73,11 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   const [isUploading, setIsUploading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [isSigningIn, setIsSigningIn] = useState(false);
+
+  // Search and Filter states for Browse View
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterFaculty, setFilterFaculty] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
 
   const [metadata, setMetadata] = useState({
     faculty: "",
@@ -91,16 +97,18 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   });
 
   useEffect(() => {
-    fetchTimetables();
-  }, []);
+    if (currentUser) {
+      fetchTimetables();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const checkSync = async () => {
-      if (selectedTimetable && auth.currentUser) {
+      if (selectedTimetable && currentUser) {
         try {
           const q = query(
             collection(db, 'user_syncs'),
-            where('userId', '==', auth.currentUser.uid),
+            where('userId', '==', currentUser.uid),
             where('timetableId', '==', selectedTimetable.id)
           );
           const snapshot = await getDocs(q);
@@ -119,11 +127,23 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       }
     };
     checkSync();
-  }, [selectedTimetable, auth.currentUser]);
+  }, [selectedTimetable, currentUser]);
+
+  const filteredTimetables = timetables.filter(t => {
+    const matchesSearch = searchQuery.trim() === "" || 
+      t.department.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (t.faculty && t.faculty.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.level && t.level.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesFaculty = !filterFaculty || t.faculty === filterFaculty;
+    const matchesDept = !filterDepartment || (t.department === filterDepartment || (filterDepartment === 'Other' && !RSU_DEPARTMENTS[filterFaculty]?.includes(t.department)));
+    
+    return matchesSearch && matchesFaculty && matchesDept;
+  });
 
   const handleStartCreation = async () => {
     if (isSigningIn) return;
-    if (!auth.currentUser) {
+    if (!currentUser) {
       setIsSigningIn(true);
       try {
         await signInWithPopup(auth, googleProvider);
@@ -245,7 +265,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   };
 
   const saveTimetable = async () => {
-    if (!auth.currentUser) {
+    if (!currentUser) {
       alert("Please sign in to publish.");
       return;
     }
@@ -266,8 +286,8 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         department: metadata.department,
         level: metadata.level,
         semester: metadata.semester || "1st",
-        creatorId: auth.currentUser.uid,
-        creatorEmail: auth.currentUser.email || 'anonymous',
+        creatorId: currentUser.uid,
+        creatorEmail: currentUser.email || 'anonymous',
         status: 'published',
         createdAt: new Date().toISOString()
       });
@@ -300,16 +320,26 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   };
 
   const handleSyncToCalendar = async () => {
-    if (isSigningIn || !auth.currentUser) return;
+    if (isSigningIn || !currentUser) return;
     try {
-      setIsSigningIn(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      setIsSigningIn(false);
-      setSyncStatus('syncing');
+      let accessToken = getCachedAccessToken();
       
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const accessToken = credential?.accessToken;
-      if (!accessToken) throw new Error('Failed to get access token');
+      if (!accessToken) {
+        setIsSigningIn(true);
+        const result = await signInWithPopup(auth, googleProvider);
+        setIsSigningIn(false);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        accessToken = credential?.accessToken || null;
+        if (accessToken) {
+          setCachedAccessToken(accessToken);
+        }
+      }
+      
+      if (!accessToken) {
+        throw new Error('Could not obtain authorization. Please sign in using "Sync with Redirect" in the side-menu first.');
+      }
+      
+      setSyncStatus('syncing');
       
       const res = await fetch('/api/calendar/sync', {
         method: 'POST',
@@ -318,15 +348,15 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       });
       
       if (!res.ok) throw new Error("Sync API failed");
-
+ 
       const data = await res.json();
       if (data.success) {
         setSyncStatus('success');
-        if (selectedTimetable && auth.currentUser) {
+        if (selectedTimetable && currentUser) {
           const eventIds = data.events?.map((e: any) => e.id) || [];
           const q = query(
             collection(db, 'user_syncs'),
-            where('userId', '==', auth.currentUser.uid),
+            where('userId', '==', currentUser.uid),
             where('timetableId', '==', selectedTimetable.id)
           );
           const snap = await getDocs(q);
@@ -336,7 +366,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
             await updateDoc(doc(db, 'user_syncs', syncDocId), { eventIds, lastSyncedAt: new Date().toISOString() });
           } else {
             const newDoc = await addDoc(collection(db, 'user_syncs'), {
-              userId: auth.currentUser.uid,
+              userId: currentUser.uid,
               timetableId: selectedTimetable.id,
               eventIds,
               lastSyncedAt: new Date().toISOString()
@@ -357,20 +387,30 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };
-
+ 
   const handleRemoveSync = async () => {
-    if (isSigningIn || !auth.currentUser || !currentSync) return;
+    if (isSigningIn || !currentUser || !currentSync) return;
     if (!window.confirm("Remove synced entries from your Google Calendar?")) return;
-
+ 
     try {
-      setIsSigningIn(true);
-      const authResult = await signInWithPopup(auth, googleProvider);
-      setIsSigningIn(false);
-      setSyncStatus('syncing');
+      let accessToken = getCachedAccessToken();
       
-      const credential = GoogleAuthProvider.credentialFromResult(authResult);
-      const accessToken = credential?.accessToken;
-      if (!accessToken) throw new Error('Failed to get access token');
+      if (!accessToken) {
+        setIsSigningIn(true);
+        const authResult = await signInWithPopup(auth, googleProvider);
+        setIsSigningIn(false);
+        const credential = GoogleAuthProvider.credentialFromResult(authResult);
+        accessToken = credential?.accessToken || null;
+        if (accessToken) {
+          setCachedAccessToken(accessToken);
+        }
+      }
+      
+      if (!accessToken) {
+        throw new Error('Could not obtain authorization. Please sign in using "Sync with Redirect" in the side-menu first.');
+      }
+      
+      setSyncStatus('syncing');
       
       await fetch('/api/calendar/delete', {
         method: 'POST',
@@ -422,50 +462,153 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        {view === 'browse' && (
-          <div className="p-4 space-y-4">
+        {!currentUser ? (
+          <div className="p-6 flex flex-col items-center justify-center text-center h-64 space-y-6 pt-12">
+            <div className="p-4 bg-rsu-orange/10 text-rsu-orange rounded-full animate-bounce">
+              <Calendar className="w-12 h-12" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold font-sans text-rsu-text uppercase tracking-tight">Access Academic Timetables</h3>
+              <p className="text-sm text-rsu-muted mt-2 font-sans px-4 leading-relaxed">
+                Please sign in with your student Google account to view and search schedules for your department.
+              </p>
+            </div>
+            
             <button 
-              onClick={handleStartCreation}
-              className="w-full bg-rsu-orange text-white rounded-2xl p-6 flex items-center justify-between shadow-lg active:scale-95 transition-all group"
+              onClick={async () => {
+                setIsSigningIn(true);
+                try {
+                  await signInWithPopup(auth, googleProvider);
+                } catch (error: any) {
+                  alert("Sign-in error: " + error.message);
+                } finally {
+                  setIsSigningIn(false);
+                }
+              }}
+              disabled={isSigningIn}
+              className="w-full max-w-xs bg-rsu-navy text-white py-4 rounded-xl font-black uppercase tracking-wider flex items-center justify-center gap-3 active:scale-95 transition-all shadow-md hover:bg-rsu-navy/90"
             >
-              <div className="text-left">
-                <p className="text-lg font-black italic uppercase tracking-tighter">Add New Entry</p>
-                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Select Dept • Create Level</p>
-              </div>
-              <Upload className="w-6 h-6" />
+              {isSigningIn ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.7 0 3.3.61 4.5 1.74l2.42-2.42C17.345 1.517 14.93 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c5.96 0 10.74-4.8 10.74-11 0-.756-.095-1.3-.23-1.715h-10.51z" />
+                  </svg>
+                  <span>Sign In with Google</span>
+                </>
+              )}
             </button>
+            <p className="text-[10px] text-rsu-muted opacity-80 uppercase tracking-widest leading-normal">
+              SECURED BY FIREBASE AUTH
+            </p>
+          </div>
+        ) : (
+          <>
+            {view === 'browse' && (
+              <div className="p-4 space-y-4">
+                <button 
+                  onClick={handleStartCreation}
+                  className="w-full bg-rsu-orange text-white rounded-2xl p-6 flex items-center justify-between shadow-lg active:scale-95 transition-all group"
+                >
+                  <div className="text-left">
+                    <p className="text-lg font-black italic uppercase tracking-tighter">Add New Entry</p>
+                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Select Dept • Create Level</p>
+                  </div>
+                  <Upload className="w-6 h-6" />
+                </button>
 
-            <div className="pt-2">
-              <h3 className="text-[10px] font-black text-rsu-navy/40 uppercase tracking-widest mb-3 px-1">Recent Schedules</h3>
-              {isLoading ? (
-                <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-rsu-orange border-t-transparent rounded-full animate-spin" /></div>
-              ) : timetables.length > 0 ? (
-                timetables.map(t => (
-                  <div key={t.id} className="relative group">
-                    <button 
-                      onClick={() => { setSelectedTimetable(t); fetchSlots(t.id); setView('review'); }}
-                      className="w-full text-left bg-rsu-card rounded-2xl p-4 mb-3 border border-rsu-border/5 shadow-sm hover:shadow-md transition-all flex items-center justify-between"
-                    >
-                      <div>
-                        <h4 className="font-black text-rsu-text text-sm uppercase">{t.faculty}</h4>
-                        <p className="text-[11px] text-rsu-muted font-bold">{t.department} • {t.level}</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-rsu-orange" />
-                    </button>
-                    {auth.currentUser?.uid === t.creatorId && (
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteTimetable(t); }} className="absolute right-12 top-1/2 -translate-y-1/2 p-2 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-4 h-4" /></button>
+                {/* Filter and Selection Section */}
+                <div className="bg-rsu-card border border-rsu-border/20 rounded-2xl p-4 shadow-sm space-y-3">
+                  <h3 className="text-[10px] font-black text-rsu-navy/60 uppercase tracking-widest px-1">Filter Academic Timetables</h3>
+                  
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder="Search Faculty, Dept, Level..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-rsu-bg border-2 border-rsu-border rounded-xl px-4 py-3 text-xs font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all placeholder:text-rsu-muted/40"
+                    />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-rsu-muted hover:text-rsu-orange text-xs font-bold">Clear</button>
                     )}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-10 opacity-30">
-                  <FileText className="w-12 h-12 mx-auto mb-2" />
-                  <p className="text-[10px] font-black uppercase">No timetables found</p>
+
+                  {/* Dropdowns */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <select 
+                      className="bg-rsu-bg border-2 border-rsu-border rounded-xl p-3 text-xs font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all cursor-pointer"
+                      value={filterFaculty}
+                      onChange={(e) => {
+                        setFilterFaculty(e.target.value);
+                        setFilterDepartment('');
+                      }}
+                    >
+                      <option value="">All Faculties</option>
+                      {RSU_FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+
+                    <select 
+                      className="bg-rsu-bg border-2 border-rsu-border rounded-xl p-3 text-xs font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all cursor-pointer disabled:opacity-50"
+                      value={filterDepartment}
+                      disabled={!filterFaculty}
+                      onChange={(e) => setFilterDepartment(e.target.value)}
+                    >
+                      <option value="">All Depts</option>
+                      {(filterFaculty && RSU_DEPARTMENTS[filterFaculty] || []).map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                      {filterFaculty && <option value="Other">Other</option>}
+                    </select>
+                  </div>
+
+                  {(searchQuery || filterFaculty || filterDepartment) && (
+                    <button 
+                      onClick={() => {
+                        setSearchQuery('');
+                        setFilterFaculty('');
+                        setFilterDepartment('');
+                      }}
+                      className="w-full text-center text-xs text-rsu-orange font-bold uppercase tracking-widest pt-1 hover:underline"
+                    >
+                      Clear All Filters
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+
+                <div className="pt-2">
+                  <h3 className="text-[10px] font-black text-rsu-navy/40 uppercase tracking-widest mb-3 px-1">Schedules found</h3>
+                  {isLoading ? (
+                    <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-rsu-orange border-t-transparent rounded-full animate-spin" /></div>
+                  ) : filteredTimetables.length > 0 ? (
+                    filteredTimetables.map(t => (
+                      <div key={t.id} className="relative group">
+                        <button 
+                          onClick={() => { setSelectedTimetable(t); fetchSlots(t.id); setView('review'); }}
+                          className="w-full text-left bg-rsu-card rounded-2xl p-4 mb-3 border border-rsu-border/5 shadow-sm hover:shadow-md transition-all flex items-center justify-between"
+                        >
+                          <div>
+                            <h4 className="font-black text-rsu-text text-sm uppercase">{t.faculty}</h4>
+                            <p className="text-[11px] text-rsu-muted font-bold">{t.department} • {t.level}</p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-rsu-orange" />
+                        </button>
+                        {currentUser?.uid === t.creatorId && (
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteTimetable(t); }} className="absolute right-12 top-1/2 -translate-y-1/2 p-2 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-4 h-4" /></button>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 opacity-30 bg-rsu-card rounded-2xl border border-dashed border-rsu-border p-6">
+                      <FileText className="w-10 h-10 mx-auto mb-2 text-rsu-muted" />
+                      <p className="text-[10px] font-black uppercase">No timetables fit the filter</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
         {view === 'setup' && (
           <div className="p-6 space-y-6">
@@ -613,6 +756,8 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
             <button onClick={() => { if(!manualSlot.courseCode) return; setSlots([...slots, manualSlot]); setManualSlot({...manualSlot, courseCode: "", courseTitle: "", venue: ""}); }} className="w-full bg-rsu-navy text-white py-4 rounded-xl font-black">Add Slot</button>
             <button disabled={slots.length === 0} onClick={() => setView('review')} className="w-full bg-rsu-orange text-white py-4 rounded-xl font-black">Review & Map</button>
           </div>
+        )}
+          </>
         )}
       </div>
     </motion.div>
