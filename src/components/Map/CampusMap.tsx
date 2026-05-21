@@ -70,6 +70,9 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
       center={RSU_CENTER} 
       zoom={DEFAULT_ZOOM} 
       zoomControl={false}
+      minZoom={15}
+      maxBounds={[[4.780, 6.966], [4.814, 6.994]]}
+      maxBoundsViscosity={1.0}
       className={cn("w-full h-full", isSatelliteView && "satellite-active")}
     >
       <MapController 
