@@ -33,7 +33,10 @@ export const Header: React.FC<HeaderProps> = ({
             <GraduationCap className="text-white drop-shadow-sm" size={24} />
           </div>
           <div className="flex flex-col justify-center">
-            <h1 className="text-sm md:text-base font-display font-black text-rsu-navy dark:text-white uppercase tracking-tight leading-none">
+            <h1 
+              style={{ color: isDarkMode ? '#FFFFFF' : '#0F172A' }}
+              className="text-sm md:text-base font-display font-black uppercase tracking-tight leading-none"
+            >
               Rivers State University
             </h1>
             <div className="flex items-center gap-2 mt-1">
@@ -69,7 +72,12 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className="p-2 bg-rsu-bg rounded-xl text-rsu-navy hover:bg-rsu-navy/10 transition-all flex items-center justify-center shadow-inner border border-rsu-navy/10"
+          className={cn(
+            "p-2 bg-rsu-bg rounded-xl transition-all flex items-center justify-center shadow-inner border",
+            isDarkMode 
+              ? "text-white border-white/20 hover:bg-white/10" 
+              : "text-rsu-navy border-rsu-navy/10 hover:bg-rsu-navy/10"
+          )}
           aria-label="Toggle dark mode"
         >
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}

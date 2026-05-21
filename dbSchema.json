@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TimetableFirestoreDocument",
+  "description": "Firestore document schema for a published or saved user timetable in the 'timetables' collection.",
+  "type": "object",
+  "properties": {
+    "timetableId": {
+      "type": "string",
+      "description": "The unique document ID for this timetable."
+    },
+    "ownerId": {
+      "type": "string",
+      "description": "The UID of the Google authenticated user who owns this timetable."
+    },
+    "ownerEmail": {
+      "type": "string",
+      "format": "email",
+      "description": "The email of the Google authenticated user who owns this timetable."
+    },
+    "imageUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "The public or direct URL to the timetable image stored in Cloud Storage."
+    },
+    "isPublished": {
+      "type": "boolean",
+      "description": "Flag indicating if this timetable is shared publicly on the campus map."
+    },
+    "createdAt": {
+      "type": "object",
+      "description": "Firestore server timestamp indicating creation time."
+    },
+    "updatedAt": {
+      "type": "object",
+      "description": "Firestore server timestamp indicating the last update time."
+    },
+    "extractedData": {
+      "type": "object",
+      "description": "Object containing the OCR extracted schedule data.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Descriptive title for the timetable, e.g., 'Department of Civil Engineering - Year 2'."
+        },
+        "schedule": {
+          "type": "array",
+          "description": "Array of lecture slots representing the weekly schedule.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {
+                "type": "string",
+                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "description": "The day of the week the lecture is held."
+              },
+              "time": {
+                "type": "string",
+                "description": "The time slot, formatted clearly as HH:MM - HH:MM (e.g., '08:00 - 10:00')."
+              },
+              "course": {
+                "type": "string",
+                "description": "The course code or course title, e.g., 'PHY 201'."
+              },
+              "venue": {
+                "type": "string",
+                "description": "The lecture hall, classroom, or lab location where the class is held."
+              }
+            },
+            "required": ["day", "time", "course", "venue"]
+          }
+        }
+      },
+      "required": ["title", "schedule"]
+    }
+  },
+  "required": [
+    "timetableId",
+    "ownerId",
+    "ownerEmail",
+    "imageUrl",
+    "isPublished",
+    "createdAt",
+    "updatedAt",
+    "extractedData"
+  ]
+}

@@ -1,11 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global Deny
+    
+    // Global safety net (Default Deny Catch-All)
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // --- REUSABLE SECURITY PRIMITIVES AND HELPERS ---
+    
     function isSignedIn() {
       return request.auth != null;
     }
@@ -26,79 +29,87 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
+    // --- COLLECTION RULES ---
 
-    // User Rules
-    match /users/{userId} {
-      function isValidUser(data) {
-        return data.email is string && data.email.size() <= 128
-          && data.role in ['admin', 'student']
-          && (!('faculty' in data) || data.faculty is string)
-          && (!('department' in data) || data.department is string)
-          && (!('level' in data) || data.level is string)
-          && (!('semester' in data) || data.semester is string);
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
-      allow update: if isSignedIn() && isOwner(userId) && isValidUser(incoming())
-        && incoming().role == existing().role; // Cannot change own role
-    }
-
-    // User Syncs (Public records of sync)
-    match /user_syncs/{syncId} {
-      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.userId && request.auth.uid == request.resource.data.userId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
-    }
-
-    // Notifications (Briefings)
-    match /notifications/{notifId} {
-      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.userId 
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-    }
-
-    // Timetable Rules
+    // 1. Timetables Collection (Under RSU Security Schema)
     match /timetables/{timetableId} {
+      
+      // Standalone schema-based validation helper (The Pillar of Hardened Rules)
       function isValidTimetable(data) {
-        return data.faculty is string && data.faculty.size() <= 128
-          && data.department is string && data.department.size() <= 128
-          && data.level is string
-          && data.semester is string
-          && data.creatorId == request.auth.uid
-          && data.status in ['published', 'draft']
-          && data.creatorEmail is string
-          && data.createdAt is string;
+        return data.timetableId is string && data.timetableId.size() <= 128
+          && data.ownerId == request.auth.uid
+          && data.ownerEmail is string && data.ownerEmail.size() <= 128
+          && data.imageUrl is string && data.imageUrl.size() <= 1024
+          && data.isPublished is bool
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp
+          && data.extractedData is map
+          && data.extractedData.title is string && data.extractedData.title.size() <= 256
+          && data.extractedData.schedule is list
+          && data.keys().hasAll([
+            'timetableId', 'ownerId', 'ownerEmail', 'imageUrl', 
+            'isPublished', 'createdAt', 'updatedAt', 'extractedData'
+          ]) && data.keys().size() == 8;
       }
 
-      function isCreator() {
-        return isSignedIn() && existing().creatorId == request.auth.uid;
+      // Check validation inside slots in schedule array
+      function isValidScheduleItem(item) {
+        return item is map 
+          && item.day is string && item.day.size() <= 32
+          && item.time is string && item.time.size() <= 64
+          && item.course is string && item.course.size() <= 128
+          && item.venue is string && item.venue.size() <= 256;
       }
 
-      allow list: if isSignedIn() && (resource.data.status == 'published' || isCreator());
-      allow get: if isSignedIn() && (resource.data.status == 'published' || isCreator());
-      allow create: if isSignedIn() && isValidTimetable(incoming());
-      allow update: if isSignedIn() && isCreator() && isValidTimetable(incoming())
-        && incoming().creatorId == existing().creatorId;
-      allow delete: if isSignedIn() && isCreator();
+      // Read rules: Any authenticated user can read all timetables
+      allow get, list: if isSignedIn();
 
-      // Slots
+      // Write rules: Only authenticated owner can perform mutate operations
+      allow create: if isSignedIn() 
+        && isOwner(incoming().ownerId) 
+        && isValidTimetable(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn() 
+        && isOwner(existing().ownerId) 
+        && isOwner(incoming().ownerId) 
+        && isValidTimetable(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isSignedIn() 
+        && isOwner(existing().ownerId);
+
+      // Support slots sub-collection for legacy relational sync components (Optional fallback)
       match /slots/{slotId} {
-        function isValidSlot(data) {
-          return data.courseCode is string && data.courseCode.size() <= 100
-            && data.day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            && data.startTime is string
-            && data.endTime is string;
-        }
-
-        allow list: if isSignedIn() && (get(/databases/$(database)/documents/timetables/$(timetableId)).data.status == 'published' || get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid);
-        allow get: if isSignedIn() && (get(/databases/$(database)/documents/timetables/$(timetableId)).data.status == 'published' || get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid);
-        allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid && isValidSlot(incoming());
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn() && isOwner(get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId);
+        allow delete: if isSignedIn() && isOwner(get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId);
       }
+    }
+
+    // 2. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow create, update: if isSignedIn() && isOwner(userId);
+    }
+
+    // 3. User Sync Tracks
+    match /user_syncs/{syncId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(incoming().userId);
+      allow update: if isSignedIn() 
+        && isOwner(existing().userId) 
+        && isOwner(incoming().userId);
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // 4. Notifications Records
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow update: if isSignedIn() && isOwner(existing().userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
     }
   }
 }

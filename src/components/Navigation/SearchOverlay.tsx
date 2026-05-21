@@ -52,7 +52,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   onToggleChat
 }) => {
   return (
-    <div className="absolute top-20 left-0 right-0 px-4 z-10 flex flex-col items-center">
+    <div className="absolute top-24 left-0 right-0 px-4 z-10 flex flex-col items-center">
       <div className="w-full max-w-2xl flex flex-col gap-1.5">
         <div className="flex-1 flex flex-col gap-1.5">
           {/* Start Point Search */}

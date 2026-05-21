@@ -21,6 +21,72 @@ import { db, auth, googleProvider, getCachedAccessToken, setCachedAccessToken } 
 import { locations } from '../../data/locations';
 import { cn } from '../../lib/utils';
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+function getFriendlyErrorMessage(error: any): string {
+  try {
+    const parsed = JSON.parse(error.message);
+    if (parsed && parsed.error) {
+      if (parsed.error.toLowerCase().includes("permission") || parsed.error.toLowerCase().includes("insufficient")) {
+        return "Permission denied: Ensure you have authorization and all required fields match campus standards.";
+      }
+      return parsed.error;
+    }
+  } catch (e) {
+    // ignore
+  }
+  const original = error.message || String(error);
+  if (original.toLowerCase().includes("permission") || original.toLowerCase().includes("insufficient")) {
+    return "Permission denied: Ensure you have authorization and all required fields match campus standards.";
+  }
+  return original;
+}
+
 interface Slot {
   id?: string;
   courseCode: string;
@@ -111,16 +177,19 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
   useEffect(() => {
     if (currentUser) {
-      fetchTimetables();
+      fetchTimetables().catch(err => {
+        console.error("Mount fetchTimetables error:", err);
+      });
     }
   }, [currentUser]);
 
   useEffect(() => {
     const checkSync = async () => {
       if (selectedTimetable && currentUser) {
+        const path = 'user_syncs';
         try {
           const q = query(
-            collection(db, 'user_syncs'),
+            collection(db, path),
             where('userId', '==', currentUser.uid),
             where('timetableId', '==', selectedTimetable.id)
           );
@@ -135,11 +204,11 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
             setCurrentSync(null);
           }
         } catch (error) {
-          console.error("Error checking sync status:", error);
+          handleFirestoreError(error, OperationType.GET, path);
         }
       }
     };
-    checkSync();
+    checkSync().catch(err => console.error("checkSync failed:", err));
   }, [selectedTimetable, currentUser]);
 
   const filteredTimetables = timetables.filter(t => {
@@ -183,8 +252,9 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
   const fetchTimetables = async () => {
     setIsLoading(true);
+    const path = 'timetables';
     try {
-      const q = query(collection(db, 'timetables'), where('status', '==', 'published'));
+      const q = query(collection(db, path), where('status', '==', 'published'));
       const snapshot = await getDocs(q);
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
       
@@ -196,7 +266,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       
       setTimetables(sortedList);
     } catch (error) {
-      console.error("Error fetching timetables:", error);
+      handleFirestoreError(error, OperationType.GET, path);
     } finally {
       setIsLoading(false);
     }
@@ -204,13 +274,14 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
   const fetchSlots = async (timetableId: string) => {
     setIsLoading(true);
+    const path = `timetables/${timetableId}/slots`;
     try {
       const q = collection(db, 'timetables', timetableId, 'slots');
       const snapshot = await getDocs(q);
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Slot));
       setSlots(list);
     } catch (error) {
-      console.error("Error fetching slots:", error);
+      handleFirestoreError(error, OperationType.GET, path);
     } finally {
       setIsLoading(false);
     }
@@ -259,12 +330,37 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         throw new Error("The AI returned a response that wasn't valid JSON. Please try again with a clearer image.");
       }
       
-      if (!data.slots || !Array.isArray(data.slots)) {
+      let rawSlots = data.slots;
+      
+      if (!rawSlots && data.schedule && Array.isArray(data.schedule)) {
+        rawSlots = data.schedule.map((s: any) => {
+          let startTime = "08:00";
+          let endTime = "10:00";
+          if (s.time && typeof s.time === 'string') {
+            const parts = s.time.split('-');
+            if (parts.length === 2) {
+              startTime = parts[0].trim();
+              endTime = parts[1].trim();
+            }
+          }
+          return {
+            courseCode: s.course || "N/A",
+            courseTitle: s.courseTitle || "",
+            lecturer: s.lecturer || "",
+            day: s.day || "Monday",
+            startTime,
+            endTime,
+            venue: s.venue || "TBA"
+          };
+        });
+      }
+
+      if (!rawSlots || !Array.isArray(rawSlots)) {
         console.error("AI returned malformed data:", data);
         throw new Error("The AI couldn't find a clear timetable structure in this file. Please try a clearer image.");
       }
 
-      const parsedSlots = data.slots.map((s: any) => {
+      const parsedSlots = rawSlots.map((s: any) => {
         const venue = s.venue || "";
         const matchedLoc = locations.find(l => 
           l.officialName.toLowerCase().includes(venue.toLowerCase()) ||
@@ -298,23 +394,30 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     }
 
     setIsLoading(true);
+    let createdTimetableId: string | null = null;
     try {
       if (!metadata.faculty || !metadata.department || !metadata.level) {
         throw new Error("Please complete the faculty, department, and level fields.");
       }
 
-      const tRef = await addDoc(collection(db, 'timetables'), {
-        faculty: metadata.faculty,
-        department: metadata.department,
-        level: metadata.level,
-        semester: metadata.semester || "1st",
-        creatorId: currentUser.uid,
-        creatorEmail: currentUser.email || 'anonymous',
-        status: 'published',
-        createdAt: new Date().toISOString()
-      });
+      let tRef;
+      try {
+        tRef = await addDoc(collection(db, 'timetables'), {
+          faculty: metadata.faculty,
+          department: metadata.department,
+          level: metadata.level,
+          semester: metadata.semester || "1st",
+          creatorId: currentUser.uid,
+          creatorEmail: currentUser.email || 'anonymous',
+          status: 'published',
+          createdAt: new Date().toISOString()
+        });
+        createdTimetableId = tRef.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'timetables');
+      }
 
-      const slotPromises = slots.map(slot => {
+      const slotPromises = slots.map(async slot => {
         // Sanitize day to strictly match validDays: 'Monday' | 'Tuesday' | ...
         let rawDay = (slot.day || "Monday").trim();
         let cleanDay = rawDay.charAt(0).toUpperCase() + rawDay.slice(1).toLowerCase();
@@ -328,27 +431,36 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         const cleanEndTime = (slot.endTime || "10:00").trim();
         const cleanCourseCode = (slot.courseCode || "N/A").trim() || "N/A";
 
-        return addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
-          courseCode: cleanCourseCode,
-          courseTitle: (slot.courseTitle || "").trim(),
-          lecturer: (slot.lecturer || "").trim(),
-          day: cleanDay,
-          startTime: cleanStartTime,
-          endTime: cleanEndTime,
-          venue: (slot.venue || "TBA").trim(),
-          locationId: slot.locationId || null,
-          createdAt: new Date().toISOString()
-        });
+        try {
+          return await addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
+            courseCode: cleanCourseCode,
+            courseTitle: (slot.courseTitle || "").trim(),
+            lecturer: (slot.lecturer || "").trim(),
+            day: cleanDay,
+            startTime: cleanStartTime,
+            endTime: cleanEndTime,
+            venue: (slot.venue || "TBA").trim(),
+            locationId: slot.locationId || null,
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, `timetables/${tRef.id}/slots`);
+        }
       });
 
       await Promise.all(slotPromises);
-      setTimeout(() => fetchTimetables(), 1000);
+      setTimeout(() => {
+        fetchTimetables().catch(err => console.error(err));
+      }, 1000);
 
       showToast("success", "🎉 Timetable published successfully!");
       setView('browse');
     } catch (error: any) {
       console.error("Save error:", error);
-      showToast("error", "Failed to publish: " + error.message);
+      if (createdTimetableId) {
+        deleteDoc(doc(db, 'timetables', createdTimetableId)).catch(e => console.error("Orphan cleanup failed:", e));
+      }
+      showToast("error", "Failed to publish: " + getFriendlyErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -453,14 +565,19 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
           body: JSON.stringify({ accessToken, eventIds: currentSync.eventIds })
         });
 
-        await deleteDoc(doc(db, 'user_syncs', currentSync.id));
+        const path = `user_syncs/${currentSync.id}`;
+        try {
+          await deleteDoc(doc(db, 'user_syncs', currentSync.id));
+        } catch (err) {
+          handleFirestoreError(err, OperationType.DELETE, path);
+        }
         setCurrentSync(null);
         setSyncStatus('idle');
         showToast("success", "Successfully removed from calendar.");
       } catch (error: any) {
         setIsSigningIn(false);
         setSyncStatus('error');
-        showToast("error", "Failed to remove entries: " + (error.message || "Please try again."));
+        showToast("error", "Failed to remove entries: " + getFriendlyErrorMessage(error));
         setTimeout(() => setSyncStatus('idle'), 3000);
       }
     });
@@ -468,13 +585,14 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
   const handleDeleteTimetable = async (t: Timetable) => {
     showConfirm("Permanently delete this timetable?", async () => {
+      const path = `timetables/${t.id}`;
       try {
         setIsLoading(true);
         await deleteDoc(doc(db, 'timetables', t.id));
         showToast("success", "Timetable deleted successfully.");
-        fetchTimetables();
+        fetchTimetables().catch(err => console.error(err));
       } catch (err: any) {
-        showToast("error", "Delete failed: " + err.message);
+        handleFirestoreError(err, OperationType.DELETE, path);
       } finally {
         setIsLoading(false);
       }

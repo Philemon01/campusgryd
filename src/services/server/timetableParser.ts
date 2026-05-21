@@ -1,34 +1,40 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 const timetableSchema = {
-  description: "Structure of the extracted school timetable",
+  description: "Structure of the extracted university lecture schedule",
   type: Type.OBJECT,
   properties: {
-    faculty: { type: Type.STRING },
-    department: { type: Type.STRING },
-    level: { type: Type.STRING },
-    semester: { type: Type.STRING },
-    slots: {
+    title: { 
+      type: Type.STRING, 
+      description: "A descriptive title based on the timetable headers, e.g., Department, Year, or Faculty if visible" 
+    },
+    schedule: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          courseCode: { type: Type.STRING },
-          courseTitle: { type: Type.STRING },
-          lecturer: { type: Type.STRING },
           day: { 
             type: Type.STRING, 
-            enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] 
+            description: "Monday, Tuesday, Wednesday, Thursday, or Friday" 
           },
-          startTime: { type: Type.STRING, description: "e.g. 08:00" },
-          endTime: { type: Type.STRING, description: "e.g. 10:00" },
-          venue: { type: Type.STRING }
+          time: { 
+            type: Type.STRING, 
+            description: "The time slot, formatted clearly as HH:MM - HH:MM" 
+          },
+          course: { 
+            type: Type.STRING, 
+            description: "The course code or course title, e.g., PHY 201" 
+          },
+          venue: { 
+            type: Type.STRING, 
+            description: "The lecture hall, classroom, or lab location where the class is held" 
+          }
         },
-        required: ["courseCode", "day", "startTime", "endTime"]
+        required: ["day", "time", "course", "venue"]
       }
     }
   },
-  required: ["slots"]
+  required: ["title", "schedule"]
 };
 
 export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
@@ -44,25 +50,15 @@ export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
     }
   });
 
-  const prompt = `Extract all lecture information from this school timetable image or PDF.
-  
-  CONTEXT: This is for Rivers State University (RSU).
-  
-  DATA TO EXTRACT:
-  1. Course Code (e.g., GNS101, MTH101)
-  2. Course Title (Full name if available)
-  3. Lecturer Name
-  4. Day of the week
-  5. Start Time (HH:mm, 24-hour format)
-  6. End Time (HH:mm, 24-hour format)
-  7. Venue/Location (e.g., LT1, Engineering Block, New Science Building)
-  
-  ENUMS:
-  Day must be exactly one of: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.
-  
-  OUTPUT: A JSON object matching the provided schema. 
-  If a field is missing, provide an empty string or null as per schema.
-  Be precise and thorough. Include EVERY class found.`;
+  const prompt = `You are an expert OCR and data extraction assistant designed to extract university lecture schedules from uploaded images. 
+
+Your task is to analyze the provided image of a timetable and extract the schedule into a highly organized, clean JSON array. 
+
+Rules for extraction:
+1. Ensure venues match local campus naming conventions found in the image.
+2. If multiple courses are listed in one cell or time slot, create separate objects in the "schedule" array for each course.
+3. If an entry is blurry or missing a venue, use "Unknown" for that specific field instead of skipping the entry entirely.
+4. Do not include markdown code blocks or conversational text in your response. Return ONLY raw JSON data matching the requested schema.`;
 
   let result;
   try {
@@ -117,7 +113,7 @@ export async function parseTimetable(fileBuffer: Buffer, mimeType: string) {
     }
 
     const parsed = JSON.parse(jsonStr);
-    console.log("Parsed Slots Count:", parsed.slots?.length);
+    console.log("Parsed Schedule Count:", parsed.schedule?.length);
     return parsed;
   } catch (e) {
     console.error("Failed to parse JSON from model. Raw text:", responseText);
