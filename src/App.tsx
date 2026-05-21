@@ -155,7 +155,7 @@ export default function App() {
     const unsubscribe = onSnapshot(qSync, async (snapshot) => {
       try {
         const slotsList: any[] = [];
-        for (const docSnap of snapshot.docs) {
+        const promises = snapshot.docs.map(async (docSnap) => {
           const syncData = docSnap.data();
           if (syncData.timetableId) {
             const qSlots = collection(db, 'timetables', syncData.timetableId, 'slots');
@@ -168,11 +168,14 @@ export default function App() {
               });
             });
           }
-        }
+        });
+        await Promise.all(promises);
         setUserSlots(slotsList);
       } catch (err) {
         console.error("Error fetching slots for chatbot context:", err);
       }
+    }, (error) => {
+      console.error("onSnapshot error for user_syncs:", error);
     });
 
     return () => unsubscribe();
