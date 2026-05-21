@@ -382,75 +382,83 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     }
   };
 
-  const saveTimetable = async () => {
+  const saveTimetable = async (aiStudioData?: any) => {
     if (!currentUser) {
       showToast("error", "Please sign in to publish.");
       return;
     }
     
-    if (slots.length === 0) {
+    // Use data passed directly from your AI parser response
+    let extractedSlots = aiStudioData?.schedule;
+    if (!extractedSlots && slots && slots.length > 0) {
+      extractedSlots = slots.map(s => ({
+        day: s.day,
+        time: `${s.startTime} - ${s.endTime}`,
+        course: s.courseCode,
+        venue: s.venue
+      }));
+    }
+
+    if (!extractedSlots || extractedSlots.length === 0) {
       showToast("error", "Please add at least one class.");
       return;
     }
 
     setIsLoading(true);
     let createdTimetableId: string | null = null;
+    
     try {
       if (!metadata.faculty || !metadata.department || !metadata.level) {
         throw new Error("Please complete the faculty, department, and level fields.");
       }
 
-      let tRef;
-      try {
-        tRef = await addDoc(collection(db, 'timetables'), {
-          faculty: metadata.faculty,
-          department: metadata.department,
-          level: metadata.level,
-          semester: metadata.semester || "1st",
-          creatorId: currentUser.uid,
-          creatorEmail: currentUser.email || 'anonymous',
-          status: 'published',
-          createdAt: new Date().toISOString()
-        });
-        createdTimetableId = tRef.id;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, 'timetables');
-      }
+      // A. Add main reference record to /timetables 
+      // FIXED: Changed creatorId to ownerId to match security rules
+      const tRef = await addDoc(collection(db, 'timetables'), {
+        faculty: metadata.faculty,
+        department: metadata.department,
+        level: metadata.level,
+        semester: metadata.semester || "1st",
+        ownerId: currentUser.uid, // <-- CRITICAL FIX: Match security rule check
+        creatorEmail: currentUser.email || 'anonymous',
+        status: 'published',
+        createdAt: new Date().toISOString()
+      });
+      createdTimetableId = tRef.id;
 
-      const slotPromises = slots.map(async slot => {
-        // Sanitize day to strictly match validDays: 'Monday' | 'Tuesday' | ...
+      // B. Map child slots from AI Studio structure to your database slots format
+      const slotPromises = extractedSlots.map(async (slot: any) => {
         let rawDay = (slot.day || "Monday").trim();
         let cleanDay = rawDay.charAt(0).toUpperCase() + rawDay.slice(1).toLowerCase();
-        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        if (!validDays.includes(cleanDay)) {
-          const found = validDays.find(d => d.toLowerCase().startsWith(cleanDay.toLowerCase().substring(0, 3)));
-          cleanDay = found || "Monday";
+        
+        // AI Studio provides "HH:MM - HH:MM". Let's split it into startTime and endTime safely.
+        let startTime = "08:00";
+        let endTime = "10:00";
+        if (slot.time && slot.time.includes("-")) {
+          const parts = slot.time.split("-");
+          startTime = parts[0].trim();
+          endTime = parts[1].trim();
         }
-
-        const cleanStartTime = (slot.startTime || "08:00").trim();
-        const cleanEndTime = (slot.endTime || "10:00").trim();
-        const cleanCourseCode = (slot.courseCode || "N/A").trim() || "N/A";
-
-        try {
-          return await addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
-            courseCode: cleanCourseCode,
-            courseTitle: (slot.courseTitle || "").trim(),
-            lecturer: (slot.lecturer || "").trim(),
-            day: cleanDay,
-            startTime: cleanStartTime,
-            endTime: cleanEndTime,
-            venue: (slot.venue || "TBA").trim(),
-            locationId: slot.locationId || null,
-            createdAt: new Date().toISOString()
-          });
-        } catch (err) {
-          handleFirestoreError(err, OperationType.CREATE, `timetables/${tRef.id}/slots`);
-        }
+        
+        return await addDoc(collection(db, 'timetables', tRef.id, 'slots'), {
+          courseCode: (slot.course || "N/A").trim(), // <-- FIXED: Mapped from 'course'
+          courseTitle: "", 
+          lecturer: "",
+          day: cleanDay,
+          startTime: startTime,                      // <-- FIXED: Split from 'time'
+          endTime: endTime,                          // <-- FIXED: Split from 'time'
+          venue: (slot.venue || "TBA").trim(),       // <-- FIXED: Mapped from 'venue'
+          locationId: null,
+          createdAt: new Date().toISOString()
+        });
       });
 
       await Promise.all(slotPromises);
+      
       setTimeout(() => {
-        fetchTimetables().catch(err => console.error(err));
+        if (typeof fetchTimetables === 'function') {
+          fetchTimetables().catch(err => console.error(err));
+        }
       }, 1000);
 
       showToast("success", "🎉 Timetable published successfully!");
@@ -458,7 +466,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     } catch (error: any) {
       console.error("Save error:", error);
       if (createdTimetableId) {
-        deleteDoc(doc(db, 'timetables', createdTimetableId)).catch(e => console.error("Orphan cleanup failed:", e));
+        deleteDoc(doc(db, 'timetables', createdTimetableId)).catch(e => console.error(e));
       }
       showToast("error", "Failed to publish: " + getFriendlyErrorMessage(error));
     } finally {
