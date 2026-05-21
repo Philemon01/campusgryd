@@ -1156,16 +1156,24 @@ export default function App() {
                   ⚠️
                 </div>
                 <h3 className="font-display font-black text-xl text-rsu-navy dark:text-white uppercase tracking-tight">
-                  Vercel Domain Authorization Needed
+                  {unauthorizedDomain?.includes('run.app') || unauthorizedDomain?.includes('webcontainer.io') || unauthorizedDomain?.includes('localhost')
+                    ? "Preview Domain Authorization Needed" 
+                    : "Domain Authorization Needed"}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  You successfully hosted the Campus Navigator on Vercel! To allow Google Sign-In popups, this domain must be whitelisted in your Firebase configuration.
+                  {unauthorizedDomain?.includes('run.app') || unauthorizedDomain?.includes('webcontainer.io') || unauthorizedDomain?.includes('localhost')
+                    ? "To test Google Sign-In in your live AI Studio sandbox development environment, this preview domain must be whitelisted in your Firebase configuration Settings." 
+                    : "To allow Google Sign-In popups on your hosted project, this domain must be whitelisted in your Firebase configuration Settings."}
                 </p>
               </div>
 
               <div className="mt-6 space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Vercel Domain</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    {unauthorizedDomain?.includes('run.app') || unauthorizedDomain?.includes('webcontainer.io') || unauthorizedDomain?.includes('localhost')
+                      ? "AI Studio Preview Domain" 
+                      : "Your Domain Address"}
+                  </label>
                   <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
                     <span className="font-mono font-bold select-all overflow-x-auto whitespace-nowrap no-scrollbar flex-1 text-rsu-navy dark:text-slate-100">
                       {unauthorizedDomain}

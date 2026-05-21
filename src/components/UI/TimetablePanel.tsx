@@ -73,6 +73,19 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
   const [isUploading, setIsUploading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; action: () => void } | null>(null);
+
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => {
+      setToast(prev => prev?.message === message ? null : prev);
+    }, 6000);
+  };
+
+  const showConfirm = (message: string, action: () => void) => {
+    setConfirmDialog({ message, action });
+  };
 
   // Search and Filter states for Browse View
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,7 +162,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         await signInWithPopup(auth, googleProvider);
       } catch (error: any) {
         if (error.code === 'auth/popup-blocked') {
-          alert("Sign-in popup blocked. Please allow popups for this site.");
+          showToast("error", "Sign-in popup blocked. Please allow popups for this site.");
         }
         return;
       } finally {
@@ -266,7 +279,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       setView('review');
     } catch (error: any) {
       console.error("Parsing error:", error);
-      alert("Failed to parse: " + error.message);
+      showToast("error", "Failed to parse: " + error.message);
       setView('setup');
     } finally {
       setIsUploading(false);
@@ -275,12 +288,12 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
   const saveTimetable = async () => {
     if (!currentUser) {
-      alert("Please sign in to publish.");
+      showToast("error", "Please sign in to publish.");
       return;
     }
     
     if (slots.length === 0) {
-      alert("Please add at least one class.");
+      showToast("error", "Please add at least one class.");
       return;
     }
 
@@ -331,11 +344,11 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       await Promise.all(slotPromises);
       setTimeout(() => fetchTimetables(), 1000);
 
-      alert("🎉 Timetable published successfully!");
+      showToast("success", "🎉 Timetable published successfully!");
       setView('browse');
     } catch (error: any) {
       console.error("Save error:", error);
-      alert("Failed to publish: " + error.message);
+      showToast("error", "Failed to publish: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -397,14 +410,14 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
           }
           setCurrentSync({ id: syncDocId, eventIds });
         }
-        alert("🎉 Lectures synced to your Google Calendar!");
+        showToast("success", "🎉 Lectures synced to your Google Calendar!");
         setTimeout(() => setSyncStatus('idle'), 3000);
       }
     } catch (error: any) {
       setIsSigningIn(false);
       setSyncStatus('error');
       if (error.code !== 'auth/cancelled-popup-request' && error.code !== 'auth/popup-closed-by-user') {
-        alert("Sync Failed: " + (error.message || "Please try again."));
+        showToast("error", "Sync Failed: " + (error.message || "Please try again."));
       }
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
@@ -412,57 +425,60 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
  
   const handleRemoveSync = async () => {
     if (isSigningIn || !currentUser || !currentSync) return;
-    if (!window.confirm("Remove synced entries from your Google Calendar?")) return;
- 
-    try {
-      let accessToken = getCachedAccessToken();
-      
-      if (!accessToken) {
-        setIsSigningIn(true);
-        const authResult = await signInWithPopup(auth, googleProvider);
-        setIsSigningIn(false);
-        const credential = GoogleAuthProvider.credentialFromResult(authResult);
-        accessToken = credential?.accessToken || null;
-        if (accessToken) {
-          setCachedAccessToken(accessToken);
+    
+    showConfirm("Remove synced entries from your Google Calendar?", async () => {
+      try {
+        let accessToken = getCachedAccessToken();
+        
+        if (!accessToken) {
+          setIsSigningIn(true);
+          const authResult = await signInWithPopup(auth, googleProvider);
+          setIsSigningIn(false);
+          const credential = GoogleAuthProvider.credentialFromResult(authResult);
+          accessToken = credential?.accessToken || null;
+          if (accessToken) {
+            setCachedAccessToken(accessToken);
+          }
         }
-      }
-      
-      if (!accessToken) {
-        throw new Error('Could not obtain authorization. Please sign in using "Sync with Redirect" in the side-menu first.');
-      }
-      
-      setSyncStatus('syncing');
-      
-      await fetch('/api/calendar/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken, eventIds: currentSync.eventIds })
-      });
+        
+        if (!accessToken) {
+          throw new Error('Could not obtain authorization. Please sign in using "Sync with Redirect" in the side-menu first.');
+        }
+        
+        setSyncStatus('syncing');
+        
+        await fetch('/api/calendar/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken, eventIds: currentSync.eventIds })
+        });
 
-      await deleteDoc(doc(db, 'user_syncs', currentSync.id));
-      setCurrentSync(null);
-      setSyncStatus('idle');
-      alert("Successfully removed from calendar.");
-    } catch (error: any) {
-      setIsSigningIn(false);
-      setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 3000);
-    }
+        await deleteDoc(doc(db, 'user_syncs', currentSync.id));
+        setCurrentSync(null);
+        setSyncStatus('idle');
+        showToast("success", "Successfully removed from calendar.");
+      } catch (error: any) {
+        setIsSigningIn(false);
+        setSyncStatus('error');
+        showToast("error", "Failed to remove entries: " + (error.message || "Please try again."));
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      }
+    });
   };
 
   const handleDeleteTimetable = async (t: Timetable) => {
-    if (!window.confirm("Permanently delete this timetable?")) return;
-    try {
-      setIsLoading(true);
-      await deleteDoc(doc(db, 'timetables', t.id));
-      alert("Timetable deleted successfully.");
-      fetchTimetables();
-    } catch (err: any) {
-      alert("Delete failed: " + err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    showConfirm("Permanently delete this timetable?", async () => {
+      try {
+        setIsLoading(true);
+        await deleteDoc(doc(db, 'timetables', t.id));
+        showToast("success", "Timetable deleted successfully.");
+        fetchTimetables();
+      } catch (err: any) {
+        showToast("error", "Delete failed: " + err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    });
   };
 
   return (
@@ -496,31 +512,48 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
               </p>
             </div>
             
-            <button 
-              onClick={async () => {
-                setIsSigningIn(true);
-                try {
-                  await signInWithPopup(auth, googleProvider);
-                } catch (error: any) {
-                  alert("Sign-in error: " + error.message);
-                } finally {
-                  setIsSigningIn(false);
-                }
-              }}
-              disabled={isSigningIn}
-              className="w-full max-w-xs bg-rsu-navy text-white py-4 rounded-xl font-black uppercase tracking-wider flex items-center justify-center gap-3 active:scale-95 transition-all shadow-md hover:bg-rsu-navy/90"
-            >
-              {isSigningIn ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.7 0 3.3.61 4.5 1.74l2.42-2.42C17.345 1.517 14.93 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c5.96 0 10.74-4.8 10.74-11 0-.756-.095-1.3-.23-1.715h-10.51z" />
-                  </svg>
-                  <span>Sign In with Google</span>
-                </>
-              )}
-            </button>
+            {typeof window !== 'undefined' && window.self !== window.top ? (
+              <div className="p-4 bg-rsu-orange/10 border border-rsu-orange/20 rounded-2xl w-full max-w-xs mx-auto text-center space-y-3">
+                <p className="text-xs font-black text-rsu-orange uppercase tracking-wider flex items-center justify-center gap-1">🔒 Frame Authentication</p>
+                <p className="text-[11px] text-slate-600 font-bold leading-normal">
+                  Google Google Sign-In is restricted inside interactive inline frames due to security policies. Please open the app in a new tab to authenticate!
+                </p>
+                <a 
+                  href={window.location.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-full py-3 bg-rsu-orange hover:bg-rsu-orange/90 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                >
+                  Open in New Tab ↗
+                </a>
+              </div>
+            ) : (
+              <button 
+                onClick={async () => {
+                  setIsSigningIn(true);
+                  try {
+                    await signInWithPopup(auth, googleProvider);
+                  } catch (error: any) {
+                    showToast("error", "Sign-in error: " + error.message);
+                  } finally {
+                    setIsSigningIn(false);
+                  }
+                }}
+                disabled={isSigningIn}
+                className="w-full max-w-xs bg-rsu-navy text-white py-4 rounded-xl font-black uppercase tracking-wider flex items-center justify-center gap-3 active:scale-95 transition-all shadow-md hover:bg-rsu-navy/90"
+              >
+                {isSigningIn ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.7 0 3.3.61 4.5 1.74l2.42-2.42C17.345 1.517 14.93 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c5.96 0 10.74-4.8 10.74-11 0-.756-.095-1.3-.23-1.715h-10.51z" />
+                    </svg>
+                    <span>Sign In with Google</span>
+                  </>
+                )}
+              </button>
+            )}
             <p className="text-[10px] text-rsu-muted opacity-80 uppercase tracking-widest leading-normal">
               SECURED BY FIREBASE AUTH
             </p>
@@ -752,7 +785,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                        <button onClick={() => {
                         const v = slot.venue || "";
                         const l = locations.find(loc => loc.officialName.toLowerCase().includes(v.toLowerCase()) || loc.aliases.some(a => a.toLowerCase().includes(v.toLowerCase())));
-                        if (l) onNavigateTo(l.id); else alert("Loc not found: " + v);
+                        if (l) onNavigateTo(l.id); else showToast("error", "Loc not found: " + v);
                       }} className="p-2 bg-rsu-bg rounded-xl"><MapPin className="text-rsu-orange w-4 h-4" /></button>
                       {(!selectedTimetable || selectedTimetable.creatorId === currentUser?.uid) && (
                         <button onClick={() => setSlots(slots.filter((_, i) => i !== idx))} className="p-2 bg-red-50 text-red-500 rounded-xl"><Trash2 className="w-4 h-4" /></button>
@@ -824,6 +857,84 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
           </>
         )}
       </div>
+
+      {/* Toast Alert overlay */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="absolute top-4 left-4 right-4 z-[120] p-4 rounded-2xl shadow-2xl flex items-start gap-3 border backdrop-blur-md transition-all"
+            style={{
+              backgroundColor: toast.type === 'error' ? 'rgba(239, 68, 68, 0.95)' : toast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(13, 138, 188, 0.95)',
+              borderColor: toast.type === 'error' ? '#ef4444' : toast.type === 'success' ? '#10b981' : '#0d8abc',
+              color: '#ffffff'
+            }}
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-left">
+              <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">
+                {toast.type === 'error' ? 'Error' : toast.type === 'success' ? 'Success' : 'Notice'}
+              </p>
+              <div className="text-xs font-bold leading-normal">{toast.message}</div>
+            </div>
+            <button 
+              onClick={() => setToast(null)}
+              className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Dialog overlay */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[110] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-rsu-bg border border-rsu-border/30 rounded-3xl p-6 shadow-2xl max-w-[320px] w-full text-center space-y-6"
+            >
+              <div className="w-12 h-12 bg-rsu-orange/15 rounded-full flex items-center justify-center mx-auto text-rsu-orange">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-display font-black text-lg text-rsu-text uppercase tracking-tight">Are you sure?</h4>
+                <p className="text-[11px] text-rsu-muted font-bold leading-normal uppercase tracking-wide">
+                  {confirmDialog.message}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDialog(null)}
+                  className="flex-1 py-3 bg-white border border-rsu-border rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer select-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const act = confirmDialog.action;
+                    setConfirmDialog(null);
+                    act();
+                  }}
+                  className="flex-1 py-3 bg-rsu-orange text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rsu-orange/90 transition-all shadow-md shadow-rsu-orange/20 cursor-pointer select-none"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

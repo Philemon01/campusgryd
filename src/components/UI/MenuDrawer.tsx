@@ -78,19 +78,38 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <button 
-                      onClick={onSignIn}
-                      className="w-full py-2.5 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm cursor-pointer"
-                    >
-                      Sync with Popup
-                    </button>
-                    {onSignInRedirect && (
-                      <button 
-                        onClick={onSignInRedirect}
-                        className="w-full py-2.5 bg-rsu-navy text-white border-2 border-rsu-navy rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rsu-orange hover:border-rsu-orange transition-all shadow-md cursor-pointer text-center"
-                      >
-                        Sync with Redirect
-                      </button>
+                    {typeof window !== 'undefined' && window.self !== window.top ? (
+                      <div className="text-center p-3 bg-rsu-orange/10 border border-rsu-orange/20 rounded-xl space-y-2">
+                        <p className="text-[10px] font-black text-rsu-orange uppercase tracking-wider">🔒 Frame Restriction</p>
+                        <p className="text-[9px] text-slate-500 font-bold leading-normal">
+                          Google Sign-In is blocked inside interactive preview frames. Click below to open in a new tab and sync successfully!
+                        </p>
+                        <a 
+                          href={window.location.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-rsu-orange hover:bg-rsu-orange/90 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                        >
+                          Open in New Tab ↗
+                        </a>
+                      </div>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={onSignIn}
+                          className="w-full py-2.5 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm cursor-pointer"
+                        >
+                          Sync with Popup
+                        </button>
+                        {onSignInRedirect && (
+                          <button 
+                            onClick={onSignInRedirect}
+                            className="w-full py-2.5 bg-rsu-navy text-white border-2 border-rsu-navy rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rsu-orange hover:border-rsu-orange transition-all shadow-md cursor-pointer text-center"
+                          >
+                            Sync with Redirect
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
