@@ -34,8 +34,20 @@ service cloud.firestore {
     // 1. Timetables Collection (Under RSU Security Schema)
     match /timetables/{timetableId} {
       
+      // Checks if the incoming data matches the client-side app standard model
+      function isValidAppTimetable(data) {
+        return data.creatorId == request.auth.uid
+          && data.creatorEmail is string
+          && data.faculty is string
+          && data.department is string
+          && data.level is string
+          && data.semester is string
+          && data.status is string
+          && data.createdAt is string;
+      }
+
       // Standalone schema-based validation helper (The Pillar of Hardened Rules)
-      function isValidTimetable(data) {
+      function isValidBlueprintTimetable(data) {
         return data.timetableId is string && data.timetableId.size() <= 128
           && data.ownerId == request.auth.uid
           && data.ownerEmail is string && data.ownerEmail.size() <= 128
@@ -64,28 +76,33 @@ service cloud.firestore {
       // Read rules: Any authenticated user can read all timetables
       allow get, list: if isSignedIn();
 
-      // Write rules: Only authenticated owner can perform mutate operations
-      allow create: if isSignedIn() 
-        && isOwner(incoming().ownerId) 
-        && isValidTimetable(incoming())
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
+      // Write rules: Only authenticated owner can perform mutate operations (either standard app model or blueprint)
+      allow create: if isSignedIn() && (
+        (isOwner(incoming().creatorId) && isValidAppTimetable(incoming())) ||
+        (isOwner(incoming().ownerId) && isValidBlueprintTimetable(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time)
+      );
 
-      allow update: if isSignedIn() 
-        && isOwner(existing().ownerId) 
-        && isOwner(incoming().ownerId) 
-        && isValidTimetable(incoming())
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && (
+        (isOwner(existing().creatorId) && isOwner(incoming().creatorId) && isValidAppTimetable(incoming())) ||
+        (get(/databases/$(database)/documents/timetables/$(timetableId)).data.keys().hasAny(['ownerId']) && isOwner(existing().ownerId) && isOwner(incoming().ownerId) && isValidBlueprintTimetable(incoming()) && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time)
+      );
 
-      allow delete: if isSignedIn() 
-        && isOwner(existing().ownerId);
+      allow delete: if isSignedIn() && (
+        (existing().keys().hasAny(['creatorId']) && isOwner(existing().creatorId)) ||
+        (existing().keys().hasAny(['ownerId']) && isOwner(existing().ownerId))
+      );
 
       // Support slots sub-collection for legacy relational sync components (Optional fallback)
       match /slots/{slotId} {
         allow read: if isSignedIn();
-        allow create, update: if isSignedIn() && isOwner(get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId);
-        allow delete: if isSignedIn() && isOwner(get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId);
+        allow create, update: if isSignedIn() && (
+          (get(/databases/$(database)/documents/timetables/$(timetableId)).data.keys().hasAny(['ownerId']) && get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId == request.auth.uid) ||
+          (get(/databases/$(database)/documents/timetables/$(timetableId)).data.keys().hasAny(['creatorId']) && get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid)
+        );
+        allow delete: if isSignedIn() && (
+          (get(/databases/$(database)/documents/timetables/$(timetableId)).data.keys().hasAny(['ownerId']) && get(/databases/$(database)/documents/timetables/$(timetableId)).data.ownerId == request.auth.uid) ||
+          (get(/databases/$(database)/documents/timetables/$(timetableId)).data.keys().hasAny(['creatorId']) && get(/databases/$(database)/documents/timetables/$(timetableId)).data.creatorId == request.auth.uid)
+        );
       }
     }
 
