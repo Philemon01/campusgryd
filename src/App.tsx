@@ -1066,6 +1066,40 @@ export default function App() {
         showFloatingButton={false}
       />
 
+      {/* Floating Bottom Left Profile/Auth Widget */}
+      <AnimatePresence>
+        {!selectedLocation && !isNavigating && currentUser && (
+          <motion.div
+            initial={{ opacity: 0, x: -15, y: 10 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, x: -15, y: 15 }}
+            className="absolute left-4 bottom-6 z-30 p-2.5 pl-3.5 bg-rsu-card/90 backdrop-blur-md rounded-2xl border border-rsu-border/20 shadow-xl flex items-center gap-3 max-w-[260px] md:max-w-xs transition-colors"
+          >
+            <div className="relative flex-shrink-0">
+              <img
+                src={currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || 'User')}&background=0D8ABC&color=fff`}
+                alt={`${currentUser.displayName || 'User'}'s Profile`}
+                referrerPolicy="no-referrer"
+                className="w-10 h-10 rounded-full border-2 border-rsu-green shadow-sm object-cover"
+              />
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-rsu-green border-2 border-white dark:border-slate-900 rounded-full animate-pulse" />
+            </div>
+            
+            <div className="flex flex-col min-w-[100px] max-w-[140px]">
+              <span className="text-xs font-black text-rsu-navy dark:text-white truncate leading-none mb-1.5">
+                {currentUser.displayName || 'Campus User'}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="text-[9px] font-bold text-red-500 uppercase tracking-widest hover:text-red-600 hover:underline cursor-pointer text-left leading-none transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {notification && (
           <motion.div

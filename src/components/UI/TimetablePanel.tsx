@@ -156,6 +156,15 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         setIsSigningIn(false);
       }
     }
+    // Initialize/clear creation state when starting a new entry
+    setMetadata({
+      faculty: "",
+      department: "",
+      level: "",
+      semester: "1st"
+    });
+    setSlots([]);
+    setSelectedTimetable(null);
     setView('setup');
   };
 
@@ -625,6 +634,12 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
 
         {view === 'setup' && (
           <div className="p-6 space-y-6">
+            <button 
+              onClick={() => setView('browse')} 
+              className="text-xs font-black text-rsu-orange flex items-center gap-1 hover:underline mb-2 cursor-pointer"
+            >
+              ← Back to Browse
+            </button>
             <h3 className="text-2xl font-black italic text-rsu-text uppercase tracking-tighter">Create Entry</h3>
             <div className="space-y-4">
               <div>
@@ -665,28 +680,49 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
             <button 
               disabled={!metadata.faculty || !metadata.level}
               onClick={() => setView('entry_mode')}
-              className="w-full bg-rsu-navy text-white py-5 rounded-2xl font-black uppercase tracking-widest disabled:opacity-30"
+              className="w-full bg-rsu-navy text-white py-5 rounded-2xl font-black uppercase tracking-widest disabled:opacity-30 cursor-pointer"
             >Next Step</button>
           </div>
         )}
 
         {view === 'entry_mode' && (
-          <div className="p-6 space-y-4 h-full flex flex-col justify-center">
-            <button onClick={() => setView('create')} className="w-full bg-rsu-card border-2 border-rsu-orange/20 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-orange">
-              <div className="p-4 bg-rsu-orange text-white rounded-2xl"><BookOpen size={30} /></div>
-              <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">AI Vision</p></div>
+          <div className="p-6 space-y-6">
+            <button 
+              onClick={() => setView('setup')} 
+              className="text-xs font-black text-rsu-orange flex items-center gap-1 hover:underline mb-2 cursor-pointer"
+            >
+              ← Back to Setup
             </button>
-            <button onClick={() => { setSlots([]); setView('manual'); }} className="w-full bg-rsu-card border-2 border-rsu-navy/10 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-navy">
-              <div className="p-4 bg-rsu-navy text-white rounded-2xl"><FileText size={30} /></div>
-              <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">Manual entry</p></div>
-            </button>
+            <h3 className="text-xl font-black italic text-rsu-text uppercase tracking-tighter">Choose Entry Method</h3>
+            <div className="space-y-4">
+              <button onClick={() => setView('create')} className="w-full bg-rsu-card border-2 border-rsu-orange/20 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-orange cursor-pointer">
+                <div className="p-4 bg-rsu-orange text-white rounded-2xl"><BookOpen size={30} /></div>
+                <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">AI Vision</p></div>
+              </button>
+              <button onClick={() => setView('manual')} className="w-full bg-rsu-card border-2 border-rsu-navy/10 p-6 rounded-3xl flex items-center gap-6 group hover:border-rsu-navy cursor-pointer">
+                <div className="p-4 bg-rsu-navy text-white rounded-2xl"><FileText size={30} /></div>
+                <div className="text-left"><p className="text-lg font-black text-rsu-text uppercase italic">Manual entry</p></div>
+              </button>
+            </div>
           </div>
         )}
 
         {view === 'review' && (
           <div className="flex flex-col h-full bg-rsu-bg">
             <div className="p-6 bg-rsu-card border-b border-rsu-border shadow-sm">
-              <button onClick={() => setView('browse')} className="text-xs font-black text-rsu-orange mb-4">← Back</button>
+              <button 
+                onClick={() => {
+                  if (selectedTimetable) {
+                    setSelectedTimetable(null);
+                    setView('browse');
+                  } else {
+                    setView(slots.length > 0 ? 'manual' : 'entry_mode');
+                  }
+                }} 
+                className="text-xs font-black text-rsu-orange mb-4 hover:underline cursor-pointer"
+              >
+                ← Back
+              </button>
               <h3 className="text-xl font-black italic text-rsu-text uppercase">{metadata.department || selectedTimetable?.department}</h3>
               <p className="text-[10px] font-bold text-rsu-muted uppercase">{metadata.level || selectedTimetable?.level}</p>
               <button 
@@ -713,7 +749,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                   <div className="flex items-center justify-between border-t border-rsu-border pt-4">
                     <div className="flex items-center gap-1.5 text-[10px] font-black text-rsu-text/60 uppercase"><MapPin size={14} className="text-rsu-orange" />{slot.venue}</div>
                     <div className="flex gap-2">
-                      <button onClick={() => {
+                       <button onClick={() => {
                         const v = slot.venue || "";
                         const l = locations.find(loc => loc.officialName.toLowerCase().includes(v.toLowerCase()) || loc.aliases.some(a => a.toLowerCase().includes(v.toLowerCase())));
                         if (l) onNavigateTo(l.id); else alert("Loc not found: " + v);
@@ -728,7 +764,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
             </div>
             {!selectedTimetable && (
               <div className="p-6 bg-rsu-card border-t border-rsu-border">
-                <button onClick={saveTimetable} disabled={isLoading} className="w-full bg-rsu-orange text-white py-5 rounded-2xl font-black uppercase">
+                <button onClick={saveTimetable} disabled={isLoading} className="w-full bg-rsu-orange text-white py-5 rounded-2xl font-black uppercase cursor-pointer">
                   {isLoading ? 'Publishing...' : 'Finalize & Publish'}
                 </button>
               </div>
@@ -737,22 +773,35 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         )}
 
         {view === 'create' && (
-          <div className="p-8 flex flex-col items-center justify-center h-full text-center space-y-8">
-            <Upload className="w-12 h-12 text-rsu-orange animate-bounce" />
-            <h3 className="text-2xl font-black italic text-rsu-text uppercase">AI Vision Sync</h3>
-            <div className="space-y-4 w-full">
-              <label className="w-full bg-rsu-orange text-white py-5 rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase cursor-pointer hover:bg-rsu-orange/90 transition-colors shadow-lg shadow-rsu-orange/20">
-                {isUploading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload className="w-5 h-5" /> Scan Timetable Image</>}
-                <input type="file" className="hidden" accept="image/jpeg,image/png,application/pdf" onChange={handleFileUpload} disabled={isUploading} />
-              </label>
-              <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest">Supports: JPG, PNG, PDF (Max 5MB)</p>
+          <div className="p-6 space-y-6">
+            <button 
+              onClick={() => setView('entry_mode')} 
+              className="text-xs font-black text-rsu-orange flex items-center gap-1 hover:underline mb-2 cursor-pointer"
+            >
+              ← Back to Selection
+            </button>
+            <div className="flex flex-col items-center justify-center text-center space-y-6 pt-4">
+              <Upload className="w-12 h-12 text-rsu-orange animate-bounce" />
+              <h3 className="text-2xl font-black italic text-rsu-text uppercase text-sans tracking-tight">AI Vision Sync</h3>
+              <div className="space-y-4 w-full">
+                <label className="w-full bg-rsu-orange text-white py-5 rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase cursor-pointer hover:bg-rsu-orange/90 transition-colors shadow-lg shadow-rsu-orange/20">
+                  {isUploading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload className="w-5 h-5" /> Scan Timetable Image</>}
+                  <input type="file" className="hidden" accept="image/jpeg,image/png,application/pdf" onChange={handleFileUpload} disabled={isUploading} />
+                </label>
+                <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest">Supports: JPG, PNG, PDF (Max 5MB)</p>
+              </div>
             </div>
-            <button onClick={() => setView('entry_mode')} className="text-[10px] font-black text-rsu-muted underline uppercase">Back to selection</button>
           </div>
         )}
 
         {view === 'manual' && (
           <div className="p-6 space-y-4">
+            <button 
+              onClick={() => setView('entry_mode')} 
+              className="text-xs font-black text-rsu-orange flex items-center gap-1 hover:underline mb-2 cursor-pointer"
+            >
+              ← Back to Selection
+            </button>
             <h3 className="text-xl font-black italic text-rsu-text uppercase">Add Slot</h3>
             <div className="space-y-4">
               <input className="w-full bg-rsu-card border-2 border-rsu-border rounded-xl p-4 font-bold text-rsu-text" placeholder="COURSE CODE" value={manualSlot.courseCode} onChange={e => setManualSlot({...manualSlot, courseCode: e.target.value.toUpperCase()})} />
