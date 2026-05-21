@@ -20,6 +20,7 @@ import { signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { db, auth, googleProvider, getCachedAccessToken, setCachedAccessToken } from '../../lib/firebase';
 import { locations } from '../../data/locations';
 import { cn } from '../../lib/utils';
+import { parseTimetableOnClient } from '../../services/client/geminiParser';
 
 enum OperationType {
   CREATE = 'create',
@@ -256,7 +257,17 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     try {
       const q = query(collection(db, path), where('status', '==', 'published'));
       const snapshot = await getDocs(q);
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Timetable));
+      const list = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const creatorId = data.creatorId || data.ownerId || "";
+        const ownerId = data.ownerId || data.creatorId || "";
+        return { 
+          id: docSnap.id, 
+          ...data,
+          creatorId,
+          ownerId
+        } as any as Timetable;
+      });
       
       const sortedList = list.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime();
@@ -287,99 +298,30 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     }
   };
 
+  const handleFileAndParse = async (selectedFile: File) => {
+    try {
+      setIsUploading(true);
+      setIsLoading(true);
+      
+      // 1. Parse image locally via Gemini in the browser window
+      const aiExtractedData = await parseTimetableOnClient(selectedFile);
+      
+      // 2. Pass the clean JSON output straight into your Firestore save pipeline
+      await saveTimetable(aiExtractedData); 
+      
+    } catch (err: any) {
+       console.error("Sync Failed:", err);
+       showToast("error", "Sync Failed: " + (err.message || err));
+    } finally {
+       setIsUploading(false);
+       setIsLoading(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/timetable/parse', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const contentType = res.headers.get("content-type");
-      const responseText = await res.text();
-
-      if (!res.ok) {
-        let errorData;
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            errorData = JSON.parse(responseText);
-          } catch {
-            errorData = { error: "Failed to parse error message from server." };
-          }
-        } else {
-          // If we got HTML (like a 404 or boilerplate), don't try to parse as JSON
-          if (responseText.trim().toLowerCase().startsWith("<!doctype") || responseText.trim().toLowerCase().startsWith("<html")) {
-            throw new Error(`The server returned an HTML page (status ${res.status}). This usually means the API route was not found or the server is restarting.`);
-          }
-          throw new Error(`Server error (${res.status}): ${responseText.substring(0, 50)}...`);
-        }
-        throw new Error(errorData.error || `Upload failed with status ${res.status}`);
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (err) {
-        console.error("Failed to parse JSON response:", responseText);
-        throw new Error("The AI returned a response that wasn't valid JSON. Please try again with a clearer image.");
-      }
-      
-      let rawSlots = data.slots;
-      
-      if (!rawSlots && data.schedule && Array.isArray(data.schedule)) {
-        rawSlots = data.schedule.map((s: any) => {
-          let startTime = "08:00";
-          let endTime = "10:00";
-          if (s.time && typeof s.time === 'string') {
-            const parts = s.time.split('-');
-            if (parts.length === 2) {
-              startTime = parts[0].trim();
-              endTime = parts[1].trim();
-            }
-          }
-          return {
-            courseCode: s.course || "N/A",
-            courseTitle: s.courseTitle || "",
-            lecturer: s.lecturer || "",
-            day: s.day || "Monday",
-            startTime,
-            endTime,
-            venue: s.venue || "TBA"
-          };
-        });
-      }
-
-      if (!rawSlots || !Array.isArray(rawSlots)) {
-        console.error("AI returned malformed data:", data);
-        throw new Error("The AI couldn't find a clear timetable structure in this file. Please try a clearer image.");
-      }
-
-      const parsedSlots = rawSlots.map((s: any) => {
-        const venue = s.venue || "";
-        const matchedLoc = locations.find(l => 
-          l.officialName.toLowerCase().includes(venue.toLowerCase()) ||
-          l.aliases.some(a => a.toLowerCase().includes(venue.toLowerCase()))
-        );
-        return {
-          ...s,
-          locationId: matchedLoc?.id
-        };
-      });
-      setSlots(parsedSlots);
-      setView('review');
-    } catch (error: any) {
-      console.error("Parsing error:", error);
-      showToast("error", "Failed to parse: " + error.message);
-      setView('setup');
-    } finally {
-      setIsUploading(false);
-    }
+    await handleFileAndParse(file);
   };
 
   const saveTimetable = async (aiStudioData?: any) => {
@@ -413,13 +355,14 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       }
 
       // A. Add main reference record to /timetables 
-      // FIXED: Changed creatorId to ownerId to match security rules
+      // FIXED: Set both creatorId and ownerId to satisfy both security rules paths
       const tRef = await addDoc(collection(db, 'timetables'), {
         faculty: metadata.faculty,
         department: metadata.department,
         level: metadata.level,
         semester: metadata.semester || "1st",
-        ownerId: currentUser.uid, // <-- CRITICAL FIX: Match security rule check
+        creatorId: currentUser.uid, // Required for isValidAppTimetable validation and legacy ownership logic
+        ownerId: currentUser.uid,   // Option for legacy/alternative blueprint rules compliance
         creatorEmail: currentUser.email || 'anonymous',
         status: 'published',
         createdAt: new Date().toISOString()
@@ -461,8 +404,21 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
         }
       }, 1000);
 
-      showToast("success", "🎉 Timetable published successfully!");
-      setView('browse');
+      const publishedTimetable: Timetable = {
+        id: tRef.id,
+        faculty: metadata.faculty,
+        department: metadata.department,
+        level: metadata.level,
+        semester: metadata.semester || "1st",
+        status: 'published',
+        creatorId: currentUser.uid
+      };
+
+      setSelectedTimetable(publishedTimetable);
+      await fetchSlots(tRef.id);
+
+      showToast("success", "🎉 Timetable published successfully! You can now Sync to Calendar.");
+      setView('review');
     } catch (error: any) {
       console.error("Save error:", error);
       if (createdTimetableId) {
