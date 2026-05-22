@@ -77,15 +77,19 @@ export function fileToBase64(file: File): Promise<{ base64Data: string; mimeType
  * and invokes gemini-2.5-flash with a structured OCR/Extraction prompt.
  */
 export async function parseTimetableOnClient(file: File): Promise<any> {
-  // Pull dynamic key prioritizing NEXT_PUBLIC_GEMINI_API_KEY as per Next.js requirements.
-  // Vite alternative check is also embedded for runtime safety in multi-target templates.
+  // Resolve dynamic key traversing multiple common bundler/framework environments for highest portability
   const apiKey = (typeof process !== "undefined" && process?.env?.NEXT_PUBLIC_GEMINI_API_KEY) || 
+                 (typeof process !== "undefined" && process?.env?.VITE_GEMINI_API_KEY) ||
+                 (typeof process !== "undefined" && process?.env?.GEMINI_API_KEY) ||
                  (import.meta.env?.NEXT_PUBLIC_GEMINI_API_KEY) ||
-                 (import.meta.env?.VITE_GEMINI_API_KEY);
+                 (import.meta.env?.VITE_GEMINI_API_KEY) ||
+                 (import.meta.env?.GEMINI_API_KEY) ||
+                 ((import.meta as any).env?.VITE_GEMINI_API_KEY) ||
+                 ((import.meta as any).env?.NEXT_PUBLIC_GEMINI_API_KEY);
 
   if (!apiKey) {
     throw new Error(
-      "NEXT_PUBLIC_GEMINI_API_KEY environment variable is not defined. Please verify your client-side environment configuration."
+      "Gemini API key is not defined. Please configure VITE_GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY in your client-side environment secrets / .env file."
     );
   }
 
