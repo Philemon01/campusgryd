@@ -114,19 +114,19 @@ service cloud.firestore {
 
     // 3. User Sync Tracks
     match /user_syncs/{syncId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      allow create: if isSignedIn() && isOwner(incoming().userId);
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isSignedIn() 
-        && isOwner(existing().userId) 
-        && isOwner(incoming().userId);
-      allow delete: if isSignedIn() && isOwner(existing().userId);
+        && resource.data.userId == request.auth.uid 
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // 4. Notifications Records
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      allow update: if isSignedIn() && isOwner(existing().userId)
-        && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
   }
 }
