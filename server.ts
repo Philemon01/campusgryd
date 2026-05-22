@@ -17,7 +17,21 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     if (config.startsWith('{')) {
       serviceAccount = JSON.parse(config);
       if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        let pkey = serviceAccount.private_key.trim();
+        // Remove surrounding quotes if they exist in the JSON parsed string (common raw copy-paste issue)
+        if (pkey.startsWith('"') && pkey.endsWith('"')) {
+          pkey = pkey.substring(1, pkey.length - 1).trim();
+        }
+        if (pkey.startsWith("'") && pkey.endsWith("'")) {
+          pkey = pkey.substring(1, pkey.length - 1).trim();
+        }
+        // Normalize any double or single-escaped newlines to actual newlines
+        pkey = pkey.replace(/\\\\n/g, '\n');
+        pkey = pkey.replace(/\\n/g, '\n');
+        pkey = pkey.replace(/\\r/g, '\r');
+        
+        serviceAccount.private_key = pkey;
+        console.log(`Firebase Admin: Private key length: ${pkey.length}, starts with header: ${pkey.startsWith('-----BEGIN PRIVATE KEY-----')}, newlines: ${(pkey.match(/\n/g) || []).length}`);
       }
       if (!admin.apps.length) {
         admin.initializeApp({
