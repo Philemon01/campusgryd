@@ -465,27 +465,31 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       if (data.success) {
         setSyncStatus('success');
         if (selectedTimetable && currentUser) {
-          const eventIds = data.events?.map((e: any) => e.id) || [];
-          const q = query(
-            collection(db, 'user_syncs'),
-            where('userId', '==', currentUser.uid),
-            where('timetableId', '==', selectedTimetable.id)
-          );
-          const snap = await getDocs(q);
-          let syncDocId = "";
-          if (!snap.empty) {
-            syncDocId = snap.docs[0].id;
-            await updateDoc(doc(db, 'user_syncs', syncDocId), { eventIds, lastSyncedAt: new Date().toISOString() });
-          } else {
-            const newDoc = await addDoc(collection(db, 'user_syncs'), {
-              userId: currentUser.uid,
-              timetableId: selectedTimetable.id,
-              eventIds,
-              lastSyncedAt: new Date().toISOString()
-            });
-            syncDocId = newDoc.id;
+          try {
+            const eventIds = data.events?.map((e: any) => e.id) || [];
+            const q = query(
+              collection(db, 'user_syncs'),
+              where('userId', '==', currentUser.uid),
+              where('timetableId', '==', selectedTimetable.id)
+            );
+            const snap = await getDocs(q);
+            let syncDocId = "";
+            if (!snap.empty) {
+              syncDocId = snap.docs[0].id;
+              await updateDoc(doc(db, 'user_syncs', syncDocId), { eventIds, lastSyncedAt: new Date().toISOString() });
+            } else {
+              const newDoc = await addDoc(collection(db, 'user_syncs'), {
+                userId: currentUser.uid,
+                timetableId: selectedTimetable.id,
+                eventIds,
+                lastSyncedAt: new Date().toISOString()
+              });
+              syncDocId = newDoc.id;
+            }
+            setCurrentSync({ id: syncDocId, eventIds });
+          } catch (firestoreError: any) {
+            console.error("Non-blocking Firestore sync logging failed:", firestoreError);
           }
-          setCurrentSync({ id: syncDocId, eventIds });
         }
         showToast("success", "🎉 Lectures synced to your Google Calendar!");
         setTimeout(() => setSyncStatus('idle'), 3000);

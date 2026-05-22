@@ -114,12 +114,7 @@ service cloud.firestore {
 
     // 3. User Sync Tracks
     match /user_syncs/{syncId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() 
-        && resource.data.userId == request.auth.uid 
-        && request.resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, write: if isSignedIn();
     }
 
     // 4. Notifications Records
