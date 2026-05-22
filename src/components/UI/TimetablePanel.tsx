@@ -13,7 +13,8 @@ import {
   Save,
   Trash2,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  Loader2
 } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
@@ -844,13 +845,52 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                 onClick={currentSync ? handleRemoveSync : handleSyncToCalendar}
                 disabled={syncStatus !== 'idle'}
                 className={cn(
-                  "w-full mt-6 py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3",
-                  currentSync ? "bg-red-500 text-white" : "bg-rsu-navy text-white"
+                  "w-full mt-6 py-4 px-6 rounded-2xl font-black tracking-wider text-xs flex items-center justify-center gap-3 border-2 transition-all duration-300 relative overflow-hidden group hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-md active:scale-[0.99]",
+                  syncStatus === 'syncing' && "bg-indigo-600 border-indigo-600/50 text-white cursor-not-allowed animate-pulse shadow-md shadow-indigo-600/10",
+                  syncStatus === 'success' && "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-600/20",
+                  syncStatus === 'error' && "bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-600/20",
+                  syncStatus === 'idle' && (
+                    currentSync 
+                      ? "bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100/80 hover:border-rose-300 shadow-sm shadow-rose-100/30" 
+                      : "bg-rsu-navy border-rsu-navy text-white hover:bg-rsu-navy/95 hover:border-rsu-orange/45 shadow-md shadow-rsu-navy/20 hover:shadow-lg hover:shadow-rsu-navy/30"
+                  )
                 )}
               >
-                {syncStatus === 'syncing' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : currentSync ? <Trash2 className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
-                {currentSync ? 'Remove Sync' : 'Sync to Calendar'}
+                {syncStatus === 'syncing' && (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Syncing your lectures...</span>
+                  </>
+                )}
+                {syncStatus === 'success' && (
+                  <>
+                    <Check className="w-4 h-4 animate-bounce text-white" />
+                    <span>Lectures synced!</span>
+                  </>
+                )}
+                {syncStatus === 'error' && (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-white animate-pulse" />
+                    <span>Sync Failed - try again</span>
+                  </>
+                )}
+                {syncStatus === 'idle' && (
+                  currentSync ? (
+                    <>
+                      <Trash2 className="w-4 h-4 group-hover:-rotate-6 transition-transform text-rose-600" />
+                      <span>Remove from Google Calendar</span>
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4 group-hover:scale-110 transition-transform text-rsu-orange" />
+                      <span>Sync to Google Calendar</span>
+                    </>
+                  )
+                )}
               </button>
+              <p className="text-[10px] text-center text-rsu-muted italic mt-2.5">
+                Lectures repeat weekly on Google Calendar for the semester duration.
+              </p>
             </div>
             <div className="flex-1 p-4 space-y-4">
               {slots.map((slot, idx) => (
