@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rsu-navy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#001F3F" />
+      <stop offset="100%" stop-color="#0a2e5c" />
+    </linearGradient>
+    <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  
+  <!-- Outer backdrop circular background with beautiful navy-to-blue gradient -->
+  <circle cx="256" cy="256" r="240" fill="url(#rsu-navy-grad)" />
+  
+  <!-- Subtle accent inner ring representing progress and connection -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#FF6B35" stroke-width="8" stroke-dasharray="16 24" opacity="0.8" />
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#2D6A4F" stroke-width="4" opacity="0.5" />
+
+  <!-- Centered Graduation Cap (White matching the in-app design) nested in a shadow group -->
+  <g filter="url(#subtle-shadow)" transform="translate(106, 116) scale(12.5)">
+    <!-- Main Diamond cap top -->
+    <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" fill="none" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Under base support -->
+    <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" fill="none" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Dangling Tassel dangling elegantly -->
+    <path d="M21.5 12v6" fill="none" stroke="#FF6B35" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="21.5" cy="18.5" r="0.75" fill="#FF6B35" />
+  </g>
+</svg>
