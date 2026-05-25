@@ -24,7 +24,7 @@ import { MenuDrawer } from './components/UI/MenuDrawer';
 import { FloatingActions } from './components/UI/FloatingActions';
 import { EventsPanel } from './components/UI/EventsPanel';
 import { TimetablePanel } from './components/UI/TimetablePanel';
-import { LegalModal } from './components/UI/LegalModal';
+import { LegalPage } from './components/UI/LegalPage';
 import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
@@ -1058,10 +1058,18 @@ export default function App() {
 
       <AnimatePresence>
         {legalModalType && (
-          <LegalModal 
-            type={legalModalType} 
-            onClose={() => setLegalModalType(null)} 
-          />
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+            className="fixed inset-0 z-[2000]"
+          >
+            <LegalPage 
+              initialTab={legalModalType} 
+              onBack={() => setLegalModalType(null)} 
+            />
+          </motion.div>
         )}
       </AnimatePresence>
 
