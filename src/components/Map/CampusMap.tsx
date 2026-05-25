@@ -227,13 +227,13 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
                 positions={positions}
                 color={isRoad ? (isSatelliteView ? "#000" : "#FFF") : "transparent"}
                 weight={isRoad ? 14 : 0}
-                opacity={0.3}
+                opacity={0}
               />
               <Polyline 
                 positions={positions}
                 color={strokeColor}
                 weight={isRoad ? 8 : 2}
-                opacity={0.9}
+                opacity={0}
                 dashArray={feature.id?.toLowerCase().includes('path') ? "5, 5" : undefined}
                 lineCap="round"
                 lineJoin="round"
@@ -251,7 +251,7 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
                 positions={positions}
                 color={strokeColor}
                 weight={8}
-                opacity={0.9}
+                opacity={0}
               />
             );
           });

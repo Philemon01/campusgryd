@@ -24,6 +24,7 @@ import { MenuDrawer } from './components/UI/MenuDrawer';
 import { FloatingActions } from './components/UI/FloatingActions';
 import { EventsPanel } from './components/UI/EventsPanel';
 import { TimetablePanel } from './components/UI/TimetablePanel';
+import { LegalModal } from './components/UI/LegalModal';
 import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
@@ -72,6 +73,7 @@ export default function App() {
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [legalModalType, setLegalModalType] = useState<'terms' | 'privacy' | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userSlots, setUserSlots] = useState<any[]>([]);
   const [navSession, setNavSession] = useState<{
@@ -1050,7 +1052,18 @@ export default function App() {
         onSignIn={() => handleSignIn(false)}
         onSignInRedirect={() => handleSignIn(true)}
         onSignOut={handleSignOut}
+        onOpenTerms={() => setLegalModalType('terms')}
+        onOpenPrivacy={() => setLegalModalType('privacy')}
       />
+
+      <AnimatePresence>
+        {legalModalType && (
+          <LegalModal 
+            type={legalModalType} 
+            onClose={() => setLegalModalType(null)} 
+          />
+        )}
+      </AnimatePresence>
 
       <ChatBot 
         onSendMessage={handleChatMessage}

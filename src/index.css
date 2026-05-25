@@ -76,10 +76,20 @@ html, body, #root {
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   border: 2px solid var(--color-rsu-green);
   transition: transform 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
+  opacity: 0 !important;
+  pointer-events: auto !important;
 }
 
 .custom-marker:hover {
   transform: scale(1.2);
+}
+
+.custom-marker.active-highlight {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .custom-marker.active {

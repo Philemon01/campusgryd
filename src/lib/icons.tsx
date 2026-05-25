@@ -61,7 +61,7 @@ export const createCustomIcon = (type: string, isActive: boolean) => {
   const dotColor = 'bg-rsu-navy dark:bg-rsu-green';
   
   return L.divIcon({
-    className: cn('custom-marker'),
+    className: cn('custom-marker pointer-events-auto cursor-pointer'),
     html: `
       <div class="relative flex items-center justify-center w-10 h-10">
         <div class="z-10 ${bgColor} w-6 h-6 rounded-full shadow-md border-2 border-white dark:border-rsu-border/40 flex items-center justify-center transition-all duration-300 scale-100 hover:scale-125">

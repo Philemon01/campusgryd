@@ -17,6 +17,8 @@ interface MenuDrawerProps {
   onSignIn: () => void;
   onSignInRedirect?: () => void;
   onSignOut: () => void;
+  onOpenTerms?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
@@ -32,7 +34,9 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   user,
   onSignIn,
   onSignInRedirect,
-  onSignOut
+  onSignOut,
+  onOpenTerms,
+  onOpenPrivacy
 }) => {
   return (
     <AnimatePresence>
@@ -223,7 +227,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             </div>
 
             <div className="p-6 border-t border-rsu-border bg-rsu-bg/50">
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 bg-rsu-navy rounded-lg flex items-center justify-center">
                   <GraduationCap className="text-white" size={18} />
                 </div>
@@ -235,6 +239,28 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
               <p className="text-[9px] font-mono font-bold text-rsu-muted uppercase tracking-widest text-center">
                 By Philemon.Exorcist
               </p>
+              
+              <div className="mt-4 flex justify-center gap-2.5 border-t border-rsu-border/10 pt-3">
+                <button 
+                  onClick={() => {
+                    onOpenTerms?.();
+                    setIsMenuOpen(false);
+                  }}
+                  className="text-[9px] font-bold text-rsu-navy/60 hover:text-rsu-orange dark:text-neutral-400 dark:hover:text-rsu-green uppercase tracking-wider underline cursor-pointer transition-colors"
+                >
+                  Terms
+                </button>
+                <span className="text-rsu-border/40 text-[9px] font-bold select-none">•</span>
+                <button 
+                  onClick={() => {
+                    onOpenPrivacy?.();
+                    setIsMenuOpen(false);
+                  }}
+                  className="text-[9px] font-bold text-rsu-navy/60 hover:text-rsu-orange dark:text-neutral-400 dark:hover:text-rsu-green uppercase tracking-wider underline cursor-pointer transition-colors"
+                >
+                  Privacy Policy
+                </button>
+              </div>
             </div>
           </motion.div>
         </>
