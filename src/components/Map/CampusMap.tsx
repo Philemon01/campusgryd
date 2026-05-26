@@ -21,6 +21,7 @@ interface CampusMapProps {
 
 function MapController({ center, zoom, onMapMove }: { center: [number, number], zoom: number, onMapMove: (center: [number, number], zoom: number) => void }) {
   const map = useMap();
+  const lastTargetRef = React.useRef<{ center: [number, number]; zoom: number } | null>(null);
   
   // Update parents when map is moved manually
   React.useEffect(() => {
@@ -41,17 +42,219 @@ function MapController({ center, zoom, onMapMove }: { center: [number, number], 
     const currentCenter = map.getCenter();
     const currentZoom = map.getZoom();
     
-    // Only set view if it's significantly different to avoid fighting the user
-    const dist = L.latLng(center).distanceTo(currentCenter);
-    if (dist > 5 || Math.abs(zoom - currentZoom) > 0.1) {
-      map.setView(center, zoom, { animate: true, duration: 1 });
+    // Check if we already tried to set this target to avoid re-triggering during animation
+    if (lastTargetRef.current) {
+      const isSameTarget = 
+        L.latLng(center).distanceTo(lastTargetRef.current.center) < 0.1 && 
+        Math.abs(zoom - lastTargetRef.current.zoom) < 0.01;
+      if (isSameTarget) {
+        return;
+      }
     }
+
+    const dist = L.latLng(center).distanceTo(currentCenter);
+    // If the map is already there (e.g. user dragged it there or it's within threshold), just sync lastTargetRef and skip setView
+    if (dist <= 0.1 && Math.abs(zoom - currentZoom) <= 0.01) {
+      lastTargetRef.current = { center, zoom };
+      return;
+    }
+
+    // Otherwise, perform the programmatic movement
+    lastTargetRef.current = { center, zoom };
+    map.setView(center, zoom, { animate: true, duration: 1 });
   }, [center, zoom, map]);
   
   return null;
 }
 
-export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number, number], zoom: number) => void }> = ({
+function MapRotationController({ rotation, setRotation }: { rotation: number, setRotation: (r: number) => void }) {
+  const map = useMap();
+  const rotationRef = React.useRef(rotation);
+
+  React.useEffect(() => {
+    rotationRef.current = rotation;
+  }, [rotation]);
+
+  // Patch mouseEventToContainerPoint on the map instance
+  React.useEffect(() => {
+    if (!map) return;
+
+    const originalMtop = map.mouseEventToContainerPoint;
+    
+    map.mouseEventToContainerPoint = function (e: any) {
+      const currentRotation = rotationRef.current;
+      if (!currentRotation) {
+        return originalMtop.call(this, e);
+      }
+
+      const container = this.getContainer();
+      const rect = container.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      }
+
+      if (clientX === undefined || clientY === undefined) {
+        return originalMtop.call(this, e);
+      }
+
+      // Convert rotation to counter-clockwise radians for point-remapping
+      const rad = -currentRotation * Math.PI / 180;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+
+      const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+      const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+
+      const rotatedEvent = {
+        clientX: cx + rx,
+        clientY: cy + ry,
+        type: e.type,
+        target: e.target,
+        currentTarget: e.currentTarget,
+        preventDefault: e.preventDefault ? e.preventDefault.bind(e) : () => {},
+        stopPropagation: e.stopPropagation ? e.stopPropagation.bind(e) : () => {},
+      };
+
+      return originalMtop.call(this, rotatedEvent);
+    };
+
+    return () => {
+      map.mouseEventToContainerPoint = originalMtop;
+    };
+  }, [map]);
+
+  // Hook touch and mouse events for Map turn/rotation gestures
+  React.useEffect(() => {
+    if (!map) return;
+
+    const container = map.getContainer();
+    let isRotating = false;
+    let initialAngle = 0;
+    let initialRotation = 0;
+    let initialTouchAngle = 0;
+
+    const getTouchAngle = (touches: TouchList) => {
+      if (touches.length < 2) return 0;
+      const t1 = touches[0];
+      const t2 = touches[1];
+      return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      // Rotate on Shift + Drag (primary mouse button)
+      if (e.shiftKey && e.button === 0) {
+        isRotating = true;
+        map.dragging.disable();
+        
+        const rect = container.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        
+        initialAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+        initialRotation = rotationRef.current;
+        
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (isRotating) {
+        const rect = container.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        
+        const currentAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+        const deltaAngle = currentAngle - initialAngle;
+        
+        let newRot = (initialRotation + deltaAngle) % 360;
+        if (newRot < 0) newRot += 360;
+        setRotation(newRot);
+        
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onMouseUp = () => {
+      if (isRotating) {
+        isRotating = false;
+        map.dragging.enable();
+      }
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        isRotating = true;
+        map.dragging.disable();
+        map.doubleClickZoom.disable();
+        map.scrollWheelZoom.disable();
+        
+        initialTouchAngle = getTouchAngle(e.touches);
+        initialRotation = rotationRef.current;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (isRotating && e.touches.length === 2) {
+        const currentTouchAngle = getTouchAngle(e.touches);
+        const deltaAngle = currentTouchAngle - initialTouchAngle;
+        
+        let newRot = (initialRotation + deltaAngle) % 360;
+        if (newRot < 0) newRot += 360;
+        setRotation(newRot);
+        
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (isRotating) {
+        isRotating = false;
+        map.dragging.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+      }
+    };
+
+    container.addEventListener('mousedown', onMouseDown, { capture: true });
+    window.addEventListener('mousemove', onMouseMove, { capture: true });
+    window.addEventListener('mouseup', onMouseUp, { capture: true });
+    
+    container.addEventListener('touchstart', onTouchStart, { capture: true });
+    container.addEventListener('touchmove', onTouchMove, { capture: true });
+    container.addEventListener('touchend', onTouchEnd, { capture: true });
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown, { capture: true });
+      window.removeEventListener('mousemove', onMouseMove, { capture: true });
+      window.removeEventListener('mouseup', onMouseUp, { capture: true });
+      
+      container.removeEventListener('touchstart', onTouchStart, { capture: true });
+      container.removeEventListener('touchmove', onTouchMove, { capture: true });
+      container.removeEventListener('touchend', onTouchEnd, { capture: true });
+    };
+  }, [map, setRotation]);
+
+  return null;
+}
+
+export const CampusMap: React.FC<CampusMapProps & { 
+  onMapMove: (center: [number, number], zoom: number) => void;
+  mapRotation: number;
+  setMapRotation: (r: number) => void;
+}> = ({
   mapView,
   isSatelliteView,
   filteredLocations,
@@ -63,7 +266,9 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
   onLocationSelect,
   setStartLocation,
   createCustomIcon,
-  onMapMove
+  onMapMove,
+  mapRotation,
+  setMapRotation
 }) => {
   return (
     <MapContainer 
@@ -73,12 +278,18 @@ export const CampusMap: React.FC<CampusMapProps & { onMapMove: (center: [number,
       minZoom={15}
       maxBounds={[[4.780, 6.966], [4.814, 6.994]]}
       maxBoundsViscosity={1.0}
-      className={cn("w-full h-full", isSatelliteView && "satellite-active")}
+      boxZoom={false}
+      className={cn("w-full h-full", isSatelliteView && "satellite-active", "rotated-leaflet-container")}
+      style={{ '--map-rotation': `${mapRotation}deg` } as React.CSSProperties}
     >
       <MapController 
         center={mapView.center} 
         zoom={mapView.zoom} 
         onMapMove={onMapMove}
+      />
+      <MapRotationController 
+        rotation={mapRotation}
+        setRotation={setMapRotation}
       />
       {isSatelliteView ? (
         <TileLayer

@@ -25,6 +25,7 @@ import { FloatingActions } from './components/UI/FloatingActions';
 import { EventsPanel } from './components/UI/EventsPanel';
 import { TimetablePanel } from './components/UI/TimetablePanel';
 import { LegalPage } from './components/UI/LegalPage';
+import { CompassControl } from './components/UI/CompassControl';
 import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
@@ -73,7 +74,23 @@ export default function App() {
   const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [legalModalType, setLegalModalType] = useState<'terms' | 'privacy' | null>(null);
+  const [mapRotation, setMapRotation] = useState(0);
+  const [currentPath, setCurrentPath] = useState(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (path: string) => {
+    window.history.pushState(null, '', path);
+    setCurrentPath(path);
+  };
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userSlots, setUserSlots] = useState<any[]>([]);
   const [navSession, setNavSession] = useState<{
@@ -926,6 +943,18 @@ export default function App() {
     }
   }, [currentManeuverIndex, maneuvers, isVoiceAssistEnabled, playVoiceDirections]);
 
+  const isPrivacyPage = currentPath === '/privacy-policy' || currentPath === '/privacy';
+  const isTermsPage = currentPath === '/terms-of-service' || currentPath === '/terms';
+
+  if (isPrivacyPage || isTermsPage) {
+    return (
+      <LegalPage 
+        initialTab={isTermsPage ? 'terms' : 'privacy'} 
+        onBack={() => navigate('/')} 
+      />
+    );
+  }
+
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-rsu-bg">
       <CampusMap 
@@ -945,6 +974,13 @@ export default function App() {
         setStartLocation={setStartLocation}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}
+        mapRotation={mapRotation}
+        setMapRotation={setMapRotation}
+      />
+
+      <CompassControl 
+        rotation={mapRotation}
+        onRotationChange={setMapRotation}
       />
 
       <Header 
@@ -1052,26 +1088,9 @@ export default function App() {
         onSignIn={() => handleSignIn(false)}
         onSignInRedirect={() => handleSignIn(true)}
         onSignOut={handleSignOut}
-        onOpenTerms={() => setLegalModalType('terms')}
-        onOpenPrivacy={() => setLegalModalType('privacy')}
+        onOpenTerms={() => navigate('/terms-of-service')}
+        onOpenPrivacy={() => navigate('/privacy-policy')}
       />
-
-      <AnimatePresence>
-        {legalModalType && (
-          <motion.div
-            initial={{ opacity: 0, x: '100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-            className="fixed inset-0 z-[2000]"
-          >
-            <LegalPage 
-              initialTab={legalModalType} 
-              onBack={() => setLegalModalType(null)} 
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <ChatBot 
         onSendMessage={handleChatMessage}

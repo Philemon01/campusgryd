@@ -108,6 +108,24 @@ html, body, #root {
   display: none;
 }
 
+/* Map Rotation & Upright Counters styling */
+.rotated-leaflet-container {
+  transform: rotate(var(--map-rotation, 0deg)) !important;
+  transform-origin: center !important;
+  transition: transform 0.05s ease-out;
+}
+
+/* Counter-rotate overlays individually around their own center so they remain upright */
+.rotated-leaflet-container .custom-marker > div,
+.rotated-leaflet-container .user-marker-google > div,
+.rotated-leaflet-container .custom-div-icon > div,
+.rotated-leaflet-container .rsu-popup,
+.rotated-leaflet-container .leaflet-control {
+  transform: rotate(calc(-1 * var(--map-rotation, 0deg))) !important;
+  transform-origin: center !important;
+  transition: transform 0.05s ease-out;
+}
+
 /* Markdown styles */
 .markdown-body {
   font-size: 14px;

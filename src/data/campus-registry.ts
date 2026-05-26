@@ -730,5 +730,735 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "type": "facility",
     "description": "Western segment of Road B.",
     "landmark": "Near Engineering"
+  },
+  "new_libraryfe_building": {
+    "name": "New Library/F.E Building",
+    "aliases": ["New Library/F.E Building"],
+    "lat": 4.800078736340636,
+    "lng": 6.9806307554244995,
+    "address": "Rivers State University Campus",
+    "type": "library",
+    "description": "Academic resource center: New Library/F.E Building.",
+    "landmark": "Near campus pathway"
+  },
+  "vc_guest_house": {
+    "name": "V.C GUEST HOUSE",
+    "aliases": ["V.C GUEST HOUSE"],
+    "lat": 4.800000760451421,
+    "lng": 6.97960764169693,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: V.C GUEST HOUSE.",
+    "landmark": "Near campus pathway"
+  },
+  "staff_club": {
+    "name": "STAFF CLUB",
+    "aliases": ["STAFF CLUB"],
+    "lat": 4.799052063051493,
+    "lng": 6.979069113731384,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: STAFF CLUB.",
+    "landmark": "Near campus pathway"
+  },
+  "sug_secretariate": {
+    "name": "SUG SECRETARIATE",
+    "aliases": ["SUG SECRETARIATE"],
+    "lat": 4.797864319888806,
+    "lng": 6.980410039424896,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: SUG SECRETARIATE.",
+    "landmark": "Near campus pathway"
+  },
+  "estate_dept": {
+    "name": "ESTATE DEPT",
+    "aliases": ["ESTATE DEPT"],
+    "lat": 4.797171453265888,
+    "lng": 6.980848610401154,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the ESTATE DEPT.",
+    "landmark": "Near campus pathway"
+  },
+  "bus_park": {
+    "name": "BUS PARK",
+    "aliases": ["BUS PARK"],
+    "lat": 4.797587635951801,
+    "lng": 6.981881260871887,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Transit park and vehicle terminal: BUS PARK.",
+    "landmark": "Near campus pathway"
+  },
+  "tetfund_officepost_graduate_dept": {
+    "name": "TETFUND OFFICE/POST GRADUATE DEPT",
+    "aliases": ["TETFUND OFFICE/POST GRADUATE DEPT"],
+    "lat": 4.797305987343277,
+    "lng": 6.982639133930206,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the TETFUND OFFICE/POST GRADUATE DEPT.",
+    "landmark": "Near campus pathway"
+  },
+  "tetfund_building": {
+    "name": "TETFUND BUILDING",
+    "aliases": ["TETFUND BUILDING"],
+    "lat": 4.796791136932479,
+    "lng": 6.98144268989563,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: TETFUND BUILDING.",
+    "landmark": "Near campus pathway"
+  },
+  "admin_block": {
+    "name": "ADMIN BLOCK",
+    "aliases": ["ADMIN BLOCK"],
+    "lat": 4.795325852923769,
+    "lng": 6.98150172829628,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for ADMIN BLOCK.",
+    "landmark": "Near campus pathway"
+  },
+  "stadium": {
+    "name": "STADIUM",
+    "aliases": ["STADIUM"],
+    "lat": 4.79468988675661,
+    "lng": 6.980436861515045,
+    "address": "Rivers State University Campus",
+    "type": "sports",
+    "description": "Sports training ground and leisure area: STADIUM.",
+    "landmark": "Near campus pathway"
+  },
+  "post_office": {
+    "name": "POST OFFICE",
+    "aliases": ["POST OFFICE"],
+    "lat": 4.794632857410427,
+    "lng": 6.981657266616821,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for POST OFFICE.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_humanities": {
+    "name": "FACULTY OF HUMANITIES",
+    "aliases": ["FACULTY OF HUMANITIES"],
+    "lat": 4.79339396265731,
+    "lng": 6.98236155509901,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF HUMANITIES.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_comm_and_social_sci": {
+    "name": "FACULTY OF COMM. AND SOCIAL SCI",
+    "aliases": ["FACULTY OF COMM. AND SOCIAL SCI"],
+    "lat": 4.79234850978939,
+    "lng": 6.982468843460083,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF COMM. AND SOCIAL SCI.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_education": {
+    "name": "FACULTY OF EDUCATION",
+    "aliases": ["FACULTY OF EDUCATION"],
+    "lat": 4.792556515828859,
+    "lng": 6.983573883771896,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF EDUCATION.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_environmental_sci": {
+    "name": "FACULTY OF ENVIRONMENTAL SCI",
+    "aliases": ["FACULTY OF ENVIRONMENTAL SCI"],
+    "lat": 4.792576103328249,
+    "lng": 6.984711050987244,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF ENVIRONMENTAL SCI.",
+    "landmark": "Near campus pathway"
+  },
+  "coe_hostel": {
+    "name": "COE HOSTEL",
+    "aliases": ["COE HOSTEL"],
+    "lat": 4.791850125585994,
+    "lng": 6.985062420368195,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "COE HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "amazing_grace_hostel": {
+    "name": "AMAZING GRACE HOSTEL",
+    "aliases": ["AMAZING GRACE HOSTEL"],
+    "lat": 4.790589887163013,
+    "lng": 6.985652536153793,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "AMAZING GRACE HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "a_block_hostel": {
+    "name": "A BLOCK HOSTEL",
+    "aliases": ["A BLOCK HOSTEL"],
+    "lat": 4.793822188204639,
+    "lng": 6.986161395907402,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "A BLOCK HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "f_block_hostel": {
+    "name": "F BLOCK HOSTEL",
+    "aliases": ["F BLOCK HOSTEL"],
+    "lat": 4.795098951012891,
+    "lng": 6.986349135637283,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "F BLOCK HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "b_block_hostel": {
+    "name": "B BLOCK HOSTEL",
+    "aliases": ["B BLOCK HOSTEL"],
+    "lat": 4.794469738092288,
+    "lng": 6.9869687259197235,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "B BLOCK HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "d_block_hostel": {
+    "name": "D BLOCK HOSTEL",
+    "aliases": ["D BLOCK HOSTEL"],
+    "lat": 4.79654160408544,
+    "lng": 6.985957533121109,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "D BLOCK HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "nelson_mandela_hostel": {
+    "name": "NELSON MANDELA HOSTEL",
+    "aliases": ["NELSON MANDELA HOSTEL"],
+    "lat": 4.798150410427303,
+    "lng": 6.985011488199234,
+    "address": "Rivers State University Campus",
+    "type": "hostel",
+    "description": "NELSON MANDELA HOSTEL residence accommodating university students.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_sci_block_a": {
+    "name": "FACULTY OF SCI BLOCK A",
+    "aliases": ["FACULTY OF SCI BLOCK A"],
+    "lat": 4.797282869584735,
+    "lng": 6.983997583388899,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF SCI BLOCK A.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_sci_block_b": {
+    "name": "FACULTY OF SCI BLOCK B",
+    "aliases": ["FACULTY OF SCI BLOCK B"],
+    "lat": 4.797931326442656,
+    "lng": 6.984021723270416,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF SCI BLOCK B.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_sci_block_c": {
+    "name": "FACULTY OF SCI BLOCK C",
+    "aliases": ["FACULTY OF SCI BLOCK C"],
+    "lat": 4.798227653770381,
+    "lng": 6.983533561229706,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF SCI BLOCK C.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_agriculture": {
+    "name": "FACULTY OF AGRICULTURE",
+    "aliases": ["FACULTY OF AGRICULTURE"],
+    "lat": 4.799752399217646,
+    "lng": 6.9829917550086975,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the FACULTY OF AGRICULTURE.",
+    "landmark": "Near campus pathway"
+  },
+  "animal_sci_dept": {
+    "name": "ANIMAL SCI DEPT",
+    "aliases": ["ANIMAL SCI DEPT"],
+    "lat": 4.801692257321287,
+    "lng": 6.984570503234863,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the ANIMAL SCI DEPT.",
+    "landmark": "Near campus pathway"
+  },
+  "commercial_back_gate": {
+    "name": "COMMERCIAL BACK GATE",
+    "aliases": ["COMMERCIAL BACK GATE"],
+    "lat": 4.802377395277169,
+    "lng": 6.987747251987457,
+    "address": "Rivers State University Campus",
+    "type": "gate",
+    "description": "Access control gates: COMMERCIAL BACK GATE.",
+    "landmark": "Near campus pathway"
+  },
+  "new_law_faculty": {
+    "name": "NEW LAW FACULTY",
+    "aliases": ["NEW LAW FACULTY"],
+    "lat": 4.799981881474261,
+    "lng": 6.9874307513237,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: NEW LAW FACULTY.",
+    "landmark": "Near campus pathway"
+  },
+  "back_gateport_harcourt_poly": {
+    "name": "BACK GATE/PORT HARCOURT POLY",
+    "aliases": ["BACK GATE/PORT HARCOURT POLY"],
+    "lat": 4.795657805125345,
+    "lng": 6.987752616405487,
+    "address": "Rivers State University Campus",
+    "type": "gate",
+    "description": "Access control gates: BACK GATE/PORT HARCOURT POLY.",
+    "landmark": "Near campus pathway"
+  },
+  "agro_shop": {
+    "name": "AGRO SHOP",
+    "aliases": ["AGRO SHOP"],
+    "lat": 4.801683404543781,
+    "lng": 6.981894671916962,
+    "address": "Rivers State University Campus",
+    "type": "food",
+    "description": "Commercial point for feeding and retail resources: AGRO SHOP.",
+    "landmark": "Near campus pathway"
+  },
+  "rsu_farm": {
+    "name": "RSU FARM",
+    "aliases": ["RSU FARM"],
+    "lat": 4.804253303350171,
+    "lng": 6.982361376285553,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: RSU FARM.",
+    "landmark": "Near campus pathway"
+  },
+  "water_works": {
+    "name": "WATER WORKS",
+    "aliases": ["WATER WORKS"],
+    "lat": 4.804866632427845,
+    "lng": 6.980644762516022,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: WATER WORKS.",
+    "landmark": "Near campus pathway"
+  },
+  "mechanical_workshop_engineering_rsu": {
+    "name": "Mechanical Workshop engineering rsu",
+    "aliases": ["Mechanical Workshop engineering rsu"],
+    "lat": 4.793739773410506,
+    "lng": 6.979611532439566,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Mechanical Workshop engineering rsu.",
+    "landmark": "Near campus pathway"
+  },
+  "engineering_drawing_office_second_floor": {
+    "name": "Engineering Drawing Office second floor",
+    "aliases": ["Engineering Drawing Office second floor","Engineering"],
+    "lat": 4.793610996843477,
+    "lng": 6.979502844514589,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for Engineering Drawing Office second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "engineering_drawing_hall_a_second_floor": {
+    "name": "Engineering Drawing Hall A Second Floor",
+    "aliases": ["Engineering Drawing Hall A Second Floor","Engineering"],
+    "lat": 4.793608240417242,
+    "lng": 6.979402266444825,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Engineering Drawing Hall A Second Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_mechatronics_engineering_first_floor": {
+    "name": "HOD Mechatronics Engineering First Floor",
+    "aliases": ["HOD Mechatronics Engineering First Floor","Engineering"],
+    "lat": 4.793604113271787,
+    "lng": 6.979144774378732,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Mechatronics Engineering First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_petroleum_engineering_first_floor": {
+    "name": "HOD Petroleum Engineering First Floor",
+    "aliases": ["HOD Petroleum Engineering First Floor","Engineering"],
+    "lat": 4.793836750953147,
+    "lng": 6.97914343327429,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Petroleum Engineering First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_computer_engineering_office_first_floor": {
+    "name": "HOD Computer Engineering Office First Floor",
+    "aliases": ["HOD Computer Engineering Office First Floor","Engineering"],
+    "lat": 4.79384499879958,
+    "lng": 6.979402266444825,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Computer Engineering Office First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_mechanical_engineering_office_first_floor": {
+    "name": "HOD Mechanical Engineering Office First Floor",
+    "aliases": ["HOD Mechanical Engineering Office First Floor","Engineering"],
+    "lat": 4.794022370001844,
+    "lng": 6.979403607549369,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Mechanical Engineering Office First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_electrical_engineering_office_first_floor": {
+    "name": "HOD Electrical Engineering Office First Floor",
+    "aliases": ["HOD Electrical Engineering Office First Floor","Engineering"],
+    "lat": 4.794121404149202,
+    "lng": 6.979410312952403,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Electrical Engineering Office First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_civil_engineering_office_first_floor": {
+    "name": "HOD Civil Engineering Office First Floor",
+    "aliases": ["HOD Civil Engineering Office First Floor","Engineering"],
+    "lat": 4.794271343750806,
+    "lng": 6.979403607549369,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Civil Engineering Office First Floor.",
+    "landmark": "Near campus pathway"
+  },
+  "thermodynamics_lab_first_floor": {
+    "name": "Thermodynamics Lab first floor",
+    "aliases": ["Thermodynamics Lab first floor"],
+    "lat": 4.793979707297833,
+    "lng": 6.97893963456382,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Thermodynamics Lab first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "hod_chemical_engineering_second_floor": {
+    "name": "HOD Chemical Engineering second floor",
+    "aliases": ["HOD Chemical Engineering second floor","Engineering"],
+    "lat": 4.794140654067347,
+    "lng": 6.979148797692135,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for HOD Chemical Engineering second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "petroleum_production_lab_engineering": {
+    "name": "Petroleum production lab engineering",
+    "aliases": ["Petroleum production lab engineering"],
+    "lat": 4.794271342939989,
+    "lng": 6.979146115483011,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Petroleum production lab engineering.",
+    "landmark": "Near campus pathway"
+  },
+  "computer_engineering_lab_1_first_floor": {
+    "name": "Computer engineering lab 1 first floor",
+    "aliases": ["Computer engineering lab 1 first floor"],
+    "lat": 4.794140654160416,
+    "lng": 6.9788055419921875,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Computer engineering lab 1 first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "soil_mechanics_lab_civil_engineering": {
+    "name": "Soil mechanics lab civil engineering",
+    "aliases": ["Soil mechanics lab civil engineering"],
+    "lat": 4.794212148110515,
+    "lng": 6.978801518678665,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Soil mechanics lab civil engineering.",
+    "landmark": "Near campus pathway"
+  },
+  "civil_and_environmental_engineering_lab_second_floor": {
+    "name": "Civil and environmental engineering lab second floor",
+    "aliases": ["Civil and environmental engineering lab second floor"],
+    "lat": 4.794285098236755,
+    "lng": 6.978800177574158,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Civil and environmental engineering lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "fluid_mechanics_and_structural_lab_first_floor": {
+    "name": "Fluid mechanics and structural lab first floor",
+    "aliases": ["Fluid mechanics and structural lab first floor"],
+    "lat": 4.794406086782414,
+    "lng": 6.978802859783173,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Fluid mechanics and structural lab first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "computer_engineering_lab_2_second_floor": {
+    "name": "Computer engineering lab 2 second floor",
+    "aliases": ["Computer engineering lab 2 second floor"],
+    "lat": 4.794503715610817,
+    "lng": 6.978802859783173,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Computer engineering lab 2 second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "electronics_and_electrical_lab_first_floor": {
+    "name": "Electronics and electrical lab first floor",
+    "aliases": ["Electronics and electrical lab first floor"],
+    "lat": 4.794627464977467,
+    "lng": 6.978800177574158,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Electronics and electrical lab first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "engineering_materials_and_testing_lab_second_floor": {
+    "name": "Engineering materials and testing lab second floor",
+    "aliases": ["Engineering materials and testing lab second floor","Engineering"],
+    "lat": 4.794711311090001,
+    "lng": 6.978801518678665,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Engineering materials and testing lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "petroleum_drilling_lab_second_floor": {
+    "name": "Petroleum drilling lab second floor",
+    "aliases": ["Petroleum drilling lab second floor"],
+    "lat": 4.794781440076722,
+    "lng": 6.978802859783173,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Petroleum drilling lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "civil_and_environmental_engineeing_lab_second_floor": {
+    "name": "Civil and environmental engineeing lab second floor",
+    "aliases": ["Civil and environmental engineeing lab second floor"],
+    "lat": 4.79486256247738,
+    "lng": 6.978800177574158,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Civil and environmental engineeing lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "mechatronics_lab_second_floor": {
+    "name": "Mechatronics lab second floor",
+    "aliases": ["Mechatronics lab second floor"],
+    "lat": 4.794781440076722,
+    "lng": 6.97860170006752,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Mechatronics lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "chemical_engineering_lab_first_floor": {
+    "name": "Chemical engineering lab first floor",
+    "aliases": ["Chemical engineering lab first floor"],
+    "lat": 4.794689311082531,
+    "lng": 6.97859633564949,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Chemical engineering lab first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "metrology_and_metallography_lab_second_floor": {
+    "name": "Metrology and metallography lab second floor",
+    "aliases": ["Metrology and metallography lab second floor"],
+    "lat": 4.794586214154964,
+    "lng": 6.978593653440475,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Metrology and metallography lab second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "renewable_energy_lab_engineering": {
+    "name": "Renewable energy lab engineering",
+    "aliases": ["Renewable energy lab engineering"],
+    "lat": 4.794476214690413,
+    "lng": 6.978593653440475,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Renewable energy lab engineering.",
+    "landmark": "Near campus pathway"
+  },
+  "chemical_engineering_lab_first_floor_alt": {
+    "name": "Chemical Engineering Lab first floor",
+    "aliases": ["Chemical Engineering Lab first floor","Engineering"],
+    "lat": 4.79437858624136,
+    "lng": 6.97859633564949,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Chemical Engineering Lab first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "mdr_marine_engineering_room_first_floor": {
+    "name": "MDR marine engineering room first floor",
+    "aliases": ["MDR marine engineering room first floor"],
+    "lat": 4.794316056629967,
+    "lng": 6.978600583970547,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: MDR marine engineering room first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "edr_engineering_drawing_room_ground_floor": {
+    "name": "EDR - Engineering Drawing Room ground floor",
+    "aliases": ["EDR - Engineering Drawing Room ground floor", "Engineering Drawing Room ground floor", "EDR", "Engineering"],
+    "lat": 4.794342116667212,
+    "lng": 6.978453733026981,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: EDR - Engineering Drawing Room ground floor.",
+    "landmark": "Near campus pathway"
+  },
+  "edh_engineering_drawing_hall_b_first_floor": {
+    "name": "EDH - Engineering Drawing Hall b first floor",
+    "aliases": ["EDH - Engineering Drawing Hall b first floor", "Engineering Drawing Hall b first floor", "EDH Hall b", "Engineering"],
+    "lat": 4.794320734072634,
+    "lng": 6.97870284318924,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: EDH - Engineering Drawing Hall b first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "edh_engineering_drawing_hall_a_first_floor": {
+    "name": "EDH - Engineering Drawing Hall A first floor",
+    "aliases": ["EDH - Engineering Drawing Hall A first floor", "Engineering Drawing Hall A first floor", "EDH Hall A", "Engineering"],
+    "lat": 4.7943224045878505,
+    "lng": 6.978397741913796,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: EDH - Engineering Drawing Hall A first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "mdr_mechanical_second_floor": {
+    "name": "MDR mechanical second floor",
+    "aliases": ["MDR mechanical second floor"],
+    "lat": 4.794220055743477,
+    "lng": 6.978704184293747,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: MDR mechanical second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "civil_engineering_drawing_room_second_floor": {
+    "name": "Civil engineering drawing room second floor",
+    "aliases": ["Civil engineering drawing room second floor"],
+    "lat": 4.794136873523788,
+    "lng": 6.978701502084732,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "University facility: Civil engineering drawing room second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "engineering_drawing_hall_c_second_floor": {
+    "name": "Engineering Drawing hall C second floor",
+    "aliases": ["Engineering Drawing hall C second floor","Engineering"],
+    "lat": 4.794017213876022,
+    "lng": 6.978705525398254,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Engineering Drawing hall C second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "general_drawing_office_second_floor": {
+    "name": "General drawing office second floor",
+    "aliases": ["General drawing office second floor"],
+    "lat": 4.7939113271787,
+    "lng": 6.9787028431892395,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for General drawing office second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "technical_drawing_hall_second_floor": {
+    "name": "Technical drawing hall second floor",
+    "aliases": ["Technical drawing hall second floor"],
+    "lat": 4.793798565985044,
+    "lng": 6.978700161044459,
+    "address": "Rivers State University Campus",
+    "type": "facility",
+    "description": "Specialized practical training laboratory: Technical drawing hall second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "dean_engineering_office_first_floor": {
+    "name": "Dean engineering office first floor",
+    "aliases": ["Dean engineering office first floor"],
+    "lat": 4.794342120002166,
+    "lng": 6.97960359454155,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for Dean engineering office first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "engineering_dean_board_room_first_floor": {
+    "name": "Engineering dean board room first floor",
+    "aliases": ["Engineering dean board room first floor","Engineering"],
+    "lat": 4.794342120002166,
+    "lng": 6.979504185914993,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for Engineering dean board room first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "associate_dean_engineering_first_floor": {
+    "name": "Associate dean engineering first floor",
+    "aliases": ["Associate dean engineering first floor"],
+    "lat": 4.794342120002166,
+    "lng": 6.979404777288437,
+    "address": "Rivers State University Campus",
+    "type": "admin",
+    "description": "Administrative office for Associate dean engineering first floor.",
+    "landmark": "Near campus pathway"
+  },
+  "library_and_information_center_second_floor": {
+    "name": "Library and information center second floor",
+    "aliases": ["Library and information center second floor"],
+    "lat": 4.794342120002166,
+    "lng": 6.979304033517837,
+    "address": "Rivers State University Campus",
+    "type": "library",
+    "description": "Academic resource center: Library and information center second floor.",
+    "landmark": "Near campus pathway"
+  },
+  "faculty_of_engineering_admin_office_first_floor": {
+    "name": "Faculty of Engineering Admin office first floor",
+    "aliases": ["Faculty of Engineering Admin office first floor","Engineering"],
+    "lat": 4.794342120002166,
+    "lng": 6.979203289747238,
+    "address": "Rivers State University Campus",
+    "type": "faculty",
+    "description": "Academic block housing the Faculty of Engineering Admin office first floor.",
+    "landmark": "Near campus pathway"
   }
 };
