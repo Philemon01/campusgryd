@@ -201,6 +201,15 @@ if (!process.env.VERCEL) {
     } else {
       const distPath = path.join(process.cwd(), "dist");
       app.use(express.static(distPath));
+      
+      app.get(["/privacy", "/privacy-policy"], (req, res) => {
+        res.sendFile(path.join(distPath, "privacy.html"));
+      });
+      
+      app.get(["/terms", "/terms-of-service"], (req, res) => {
+        res.sendFile(path.join(distPath, "terms.html"));
+      });
+
       app.get("*all", (req, res) => {
         res.sendFile(path.join(distPath, "index.html"));
       });

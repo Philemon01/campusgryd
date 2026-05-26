@@ -947,12 +947,8 @@ export default function App() {
   const isTermsPage = currentPath === '/terms-of-service' || currentPath === '/terms';
 
   if (isPrivacyPage || isTermsPage) {
-    return (
-      <LegalPage 
-        initialTab={isTermsPage ? 'terms' : 'privacy'} 
-        onBack={() => navigate('/')} 
-      />
-    );
+    window.location.href = isTermsPage ? '/terms.html' : '/privacy.html';
+    return null;
   }
 
   return (
@@ -1088,8 +1084,8 @@ export default function App() {
         onSignIn={() => handleSignIn(false)}
         onSignInRedirect={() => handleSignIn(true)}
         onSignOut={handleSignOut}
-        onOpenTerms={() => navigate('/terms-of-service')}
-        onOpenPrivacy={() => navigate('/privacy-policy')}
+        onOpenTerms={() => { window.location.href = '/terms.html'; }}
+        onOpenPrivacy={() => { window.location.href = '/privacy.html'; }}
       />
 
       <ChatBot 
