@@ -290,6 +290,135 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const findClosestLocation = (lat: number, lng: number): Location | null => {
+    let closest: Location | null = null;
+    let minDist = Infinity;
+    for (const loc of locations) {
+      if (!loc.coordinates) continue;
+      const R = 6371e3;
+      const φ1 = lat * Math.PI/180;
+      const φ2 = loc.coordinates[0] * Math.PI/180;
+      const Δφ = (loc.coordinates[0] - lat) * Math.PI/180;
+      const Δλ = (loc.coordinates[1] - lng) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const dist = R * c;
+
+      if (dist < minDist) {
+        minDist = dist;
+        closest = loc;
+      }
+    }
+    if (minDist <= 20 && closest) {
+      return closest;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const start_lat_str = urlParams.get('start_lat');
+    const start_lng_str = urlParams.get('start_lng');
+    const dest_lat_str = urlParams.get('dest_lat');
+    const dest_lng_str = urlParams.get('dest_lng');
+    
+    if (dest_lat_str && dest_lng_str) {
+      const dLat = parseFloat(dest_lat_str);
+      const dLng = parseFloat(dest_lng_str);
+      const dName = urlParams.get('dest_name') || 'Shared Destination';
+      
+      if (!isNaN(dLat) && !isNaN(dLng)) {
+        const matchedDest = findClosestLocation(dLat, dLng) || {
+          id: 'custom_dest_' + Date.now(),
+          officialName: dName,
+          aliases: [],
+          coordinates: [dLat, dLng] as [number, number],
+          type: 'landmark' as const,
+          description: 'Destination shared via URL',
+          landmark: 'Shared Destination',
+          address: 'Rivers State University'
+        };
+        
+        setSelectedLocation(matchedDest);
+        setMapView({ center: [dLat, dLng], zoom: 18 });
+        
+        if (start_lat_str && start_lng_str) {
+          const sLat = parseFloat(start_lat_str);
+          const sLng = parseFloat(start_lng_str);
+          const sName = urlParams.get('start_name') || 'Shared Starting Point';
+          
+          if (!isNaN(sLat) && !isNaN(sLng)) {
+            const matchedStart = findClosestLocation(sLat, sLng) || {
+              id: 'custom_start_' + Date.now(),
+              officialName: sName,
+              aliases: [],
+              coordinates: [sLat, sLng] as [number, number],
+              type: 'landmark' as const,
+              description: 'Starting point shared via URL',
+              landmark: 'Shared Origin',
+              address: 'Rivers State University'
+            };
+            setStartLocation(matchedStart);
+          }
+        }
+        
+        setNotification({
+          message: "Loaded shared campus route successfully!",
+          type: 'success'
+        });
+      }
+    }
+  }, []);
+
+  const handleShareRoute = () => {
+    if (!selectedLocation) {
+      setNotification({
+        message: "Please select a location first to share a route.",
+        type: 'info'
+      });
+      return;
+    }
+    
+    const destCoords = selectedLocation.coordinates;
+    const destName = encodeURIComponent(selectedLocation.officialName);
+    
+    let startCoords: [number, number] | null = null;
+    let startName = "";
+    
+    if (startLocation) {
+      startCoords = startLocation.coordinates;
+      startName = encodeURIComponent(startLocation.officialName);
+    } else if (userLocation) {
+      startCoords = userLocation;
+      startName = encodeURIComponent("Current Location");
+    }
+    
+    const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+    let shareUrl = `${baseUrl}?dest_lat=${destCoords[0]}&dest_lng=${destCoords[1]}&dest_name=${destName}`;
+    
+    if (startCoords) {
+      shareUrl += `&start_lat=${startCoords[0]}&start_lng=${startCoords[1]}&start_name=${startName}`;
+    }
+    
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        setNotification({
+          message: "Campus route copied to clipboard! Share it with others.",
+          type: "success"
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to copy link:", err);
+        setNotification({
+          message: "Failed to copy link. Manual copy link:\n" + shareUrl,
+          type: "error"
+        });
+      });
+  };
+
   const [lastRouteCoords, setLastRouteCoords] = useState<{start: [number, number], end: [number, number]} | null>(null);
 
   useEffect(() => {
@@ -1068,6 +1197,7 @@ export default function App() {
         calculateWalkingTime={calculateWalkingTime}
         maneuvers={maneuvers}
         currentManeuverIndex={currentManeuverIndex}
+        onShareRoute={handleShareRoute}
       />
 
       <MenuDrawer 

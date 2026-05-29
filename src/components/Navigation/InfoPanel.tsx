@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Info, MapPin, Navigation, X, Volume2, Bookmark, BookmarkCheck, ArrowRight, Clock } from 'lucide-react';
+import { Info, MapPin, Navigation, X, Volume2, Bookmark, BookmarkCheck, ArrowRight, Clock, Share2 } from 'lucide-react';
 import { Location, RouteOption, Maneuver } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -23,6 +23,7 @@ interface InfoPanelProps {
   calculateWalkingTime: (c1: [number, number], c2: [number, number]) => number;
   maneuvers: Maneuver[];
   currentManeuverIndex: number;
+  onShareRoute: () => void;
 }
 
 export const InfoPanel: React.FC<InfoPanelProps> = ({
@@ -43,7 +44,8 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
   setSelectedRouteId,
   calculateWalkingTime,
   maneuvers,
-  currentManeuverIndex
+  currentManeuverIndex,
+  onShareRoute
 }) => {
   if (!selectedLocation) return null;
 
@@ -92,6 +94,17 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
                   )}
                 >
                   {savedLocationIds.includes(selectedLocation.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                </button>
+
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShareRoute();
+                  }}
+                  title="Share Route"
+                  className="p-2 rounded-lg bg-rsu-bg border border-rsu-border text-rsu-muted hover:text-rsu-navy hover:bg-rsu-border transition-all"
+                >
+                  <Share2 size={16} />
                 </button>
 
                 {!isNavigating ? (
@@ -152,12 +165,22 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
                 {selectedLocation.officialName}
               </h2>
             </div>
-            <button 
-              onClick={() => setIsPanelExpanded(false)}
-              className="p-1 bgColor-rsu-bg rounded-lg text-rsu-muted hover:bg-rsu-border transition-colors"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button 
+                onClick={onShareRoute}
+                title="Share Route"
+                className="p-1 px-2.5 bg-rsu-navy/5 text-rsu-navy hover:bg-rsu-navy/10 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+              >
+                <Share2 size={12} />
+                <span>Share</span>
+              </button>
+              <button 
+                onClick={() => setIsPanelExpanded(false)}
+                className="p-1 bgColor-rsu-bg rounded-lg text-rsu-muted hover:bg-rsu-border transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2 mb-3 overflow-y-auto no-scrollbar flex-1">
@@ -198,6 +221,19 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
 
             {plannedRoutes.length > 0 && !isNavigating && (
               <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-[9px] font-black uppercase text-rsu-muted tracking-widest">Route Options</h4>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShareRoute();
+                    }}
+                    className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-rsu-navy hover:text-rsu-green transition-colors"
+                  >
+                    <Share2 size={12} />
+                    <span>Share Route</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {plannedRoutes.map((route) => {
                     const isSelected = selectedRouteId === route.id;

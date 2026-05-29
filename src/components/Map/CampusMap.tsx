@@ -22,12 +22,27 @@ interface CampusMapProps {
 function MapController({ center, zoom, onMapMove }: { center: [number, number], zoom: number, onMapMove: (center: [number, number], zoom: number) => void }) {
   const map = useMap();
   const lastTargetRef = React.useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const isMovingProgrammaticallyRef = React.useRef<boolean>(false);
   
   // Update parents when map is moved manually
   React.useEffect(() => {
     const onMove = () => {
       const newCenter = map.getCenter();
       const newZoom = map.getZoom();
+      
+      // If we programmatically set this center, skip notifying parent to prevent ping-pong loop
+      if (isMovingProgrammaticallyRef.current) {
+        isMovingProgrammaticallyRef.current = false;
+        return;
+      }
+
+      if (lastTargetRef.current) {
+        const dTarget = L.latLng([newCenter.lat, newCenter.lng]).distanceTo(lastTargetRef.current.center);
+        const zTarget = Math.abs(newZoom - lastTargetRef.current.zoom);
+        if (dTarget < 10 && zTarget < 0.5) {
+          return;
+        }
+      }
       onMapMove([newCenter.lat, newCenter.lng], newZoom);
     };
 
@@ -61,19 +76,35 @@ function MapController({ center, zoom, onMapMove }: { center: [number, number], 
 
     // Otherwise, perform the programmatic movement
     lastTargetRef.current = { center, zoom };
+    isMovingProgrammaticallyRef.current = true;
     map.setView(center, zoom, { animate: true, duration: 1 });
   }, [center, zoom, map]);
   
   return null;
 }
 
-function MapRotationController({ rotation, setRotation }: { rotation: number, setRotation: (r: number) => void }) {
+function MapRotationController({ rotation, setRotation, isSatelliteView }: { rotation: number, setRotation: (r: number) => void, isSatelliteView: boolean }) {
   const map = useMap();
   const rotationRef = React.useRef(rotation);
 
   React.useEffect(() => {
     rotationRef.current = rotation;
   }, [rotation]);
+
+  // Synchronize CSS variable and satellite activity class on the Leaflet map container element
+  React.useEffect(() => {
+    if (!map) return;
+    const container = map.getContainer();
+    if (container) {
+      container.style.setProperty('--map-rotation', `${rotation}deg`);
+      
+      if (isSatelliteView) {
+        container.classList.add('satellite-active');
+      } else {
+        container.classList.remove('satellite-active');
+      }
+    }
+  }, [map, rotation, isSatelliteView]);
 
   // Patch mouseEventToContainerPoint on the map instance
   React.useEffect(() => {
@@ -290,6 +321,7 @@ export const CampusMap: React.FC<CampusMapProps & {
       <MapRotationController 
         rotation={mapRotation}
         setRotation={setMapRotation}
+        isSatelliteView={isSatelliteView}
       />
       {isSatelliteView ? (
         <TileLayer
