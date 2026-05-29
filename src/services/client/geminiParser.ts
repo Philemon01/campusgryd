@@ -72,9 +72,27 @@ export function fileToBase64(file: File): Promise<{ base64Data: string; mimeType
   });
 }
 
+export async function parseTimetableOnServer(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/timetable/parse", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: "Unknown server error" }));
+    throw new Error(errorData.error || `Server returned error status ${response.status}`);
+  }
+
+  return await response.json();
+}
+
 /**
  * Client-side parser function that instantiates the new modular SDK code
  * and invokes gemini-2.5-flash with a structured OCR/Extraction prompt.
+ * Seamlessly falls back to server-side endpoint if client environment has no API key.
  */
 export async function parseTimetableOnClient(file: File): Promise<any> {
   // Resolve dynamic key traversing multiple common bundler/framework environments for highest portability
@@ -88,9 +106,8 @@ export async function parseTimetableOnClient(file: File): Promise<any> {
                  ((import.meta as any).env?.NEXT_PUBLIC_GEMINI_API_KEY);
 
   if (!apiKey) {
-    throw new Error(
-      "Gemini API key is not defined. Please configure VITE_GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY in your client-side environment secrets / .env file."
-    );
+    console.info("VITE_GEMINI_API_KEY is not defined in client-side .env. Falling back seamlessly to secure server-side timetables parser...");
+    return await parseTimetableOnServer(file);
   }
 
   // Initialize the SDK with appropriate http options for telemetries

@@ -18,7 +18,9 @@ export class GeminiChatService {
   }
 
   private getAi(): GoogleGenAI | null {
-    const key = process.env.GEMINI_API_KEY;
+    const key = (typeof process !== "undefined" && process?.env?.GEMINI_API_KEY) ||
+                (import.meta.env?.VITE_GEMINI_API_KEY) ||
+                (import.meta.env?.GEMINI_API_KEY);
     if (!key || key === 'undefined' || key === '') {
       console.warn("GEMINI_API_KEY is missing");
       return null;

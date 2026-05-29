@@ -564,7 +564,10 @@ export default function App() {
   };
 
   const getAiInstance = React.useCallback(() => {
-    const key = process.env.GEMINI_API_KEY;
+    const key = (typeof process !== "undefined" && process?.env?.VITE_GEMINI_API_KEY) ||
+                (typeof process !== "undefined" && process?.env?.GEMINI_API_KEY) ||
+                (import.meta.env?.VITE_GEMINI_API_KEY) ||
+                (import.meta.env?.GEMINI_API_KEY);
     if (!key || key === 'undefined' || key === '') return null;
     try {
       return new GoogleGenAI({ apiKey: key });
