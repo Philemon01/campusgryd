@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4">
         <div className="text-right hidden sm:flex flex-col items-end">
           <p className="text-[10px] font-mono font-black text-rsu-navy dark:text-rsu-green uppercase tracking-widest leading-none">
-            Philemon.Exorcist
+            Philemon Progress
           </p>
           <p className="text-[8px] font-bold text-rsu-muted uppercase mt-0.5">System Architect</p>
         </div>

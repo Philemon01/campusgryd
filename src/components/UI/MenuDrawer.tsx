@@ -237,7 +237,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                 </div>
               </div>
               <p className="text-[9px] font-mono font-bold text-rsu-muted uppercase tracking-widest text-center">
-                By Philemon.Exorcist
+                By Philemon Progress
               </p>
               
               <div className="mt-4 flex justify-center gap-2.5 border-t border-rsu-border/10 pt-3">
