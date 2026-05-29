@@ -166,6 +166,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
     level: "",
     semester: "1st"
   });
+  const [isOtherSelected, setIsOtherSelected] = useState(false);
 
   const [manualSlot, setManualSlot] = useState<Slot>({
     courseCode: "",
@@ -247,6 +248,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
       level: "",
       semester: "1st"
     });
+    setIsOtherSelected(false);
     setSlots([]);
     setSelectedTimetable(null);
     setView('setup');
@@ -767,24 +769,50 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
                 <select 
                   className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all appearance-none cursor-pointer"
                   value={metadata.faculty}
-                  onChange={(e) => setMetadata({...metadata, faculty: e.target.value, department: ""})}
+                  onChange={(e) => {
+                    setMetadata({...metadata, faculty: e.target.value, department: ""});
+                    setIsOtherSelected(false);
+                  }}
                 >
                   <option value="">Select Faculty...</option>
                   {RSU_FACULTIES.map(f => <option key={f} value={f} className="text-rsu-text bg-rsu-card">{f}</option>)}
                 </select>
               </div>
               {metadata.faculty && (
-                <div>
-                  <label className="text-[11px] font-black text-rsu-muted uppercase tracking-widest block mb-1">Department</label>
-                  <select 
-                    className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all appearance-none cursor-pointer"
-                    value={metadata.department}
-                    onChange={(e) => setMetadata({...metadata, department: e.target.value})}
-                  >
-                    <option value="">Select Department...</option>
-                    {(RSU_DEPARTMENTS[metadata.faculty] || []).map(d => <option key={d} value={d} className="text-rsu-text bg-rsu-card">{d}</option>)}
-                    <option value="Other">Other</option>
-                  </select>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-black text-rsu-muted uppercase tracking-widest block mb-1">Department</label>
+                    <select 
+                      className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all appearance-none cursor-pointer"
+                      value={isOtherSelected ? "Other" : metadata.department}
+                      onChange={(e) => {
+                        if (e.target.value === "Other") {
+                          setIsOtherSelected(true);
+                          setMetadata({...metadata, department: ""});
+                        } else {
+                          setIsOtherSelected(false);
+                          setMetadata({...metadata, department: e.target.value});
+                        }
+                      }}
+                    >
+                      <option value="">Select Department...</option>
+                      {(RSU_DEPARTMENTS[metadata.faculty] || []).map(d => <option key={d} value={d} className="text-rsu-text bg-rsu-card">{d}</option>)}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  
+                  {isOtherSelected && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <label className="text-[11px] font-black text-rsu-orange uppercase tracking-widest block mb-1 font-mono">Type in your Department</label>
+                      <input 
+                        type="text"
+                        className="w-full bg-rsu-card border-2 border-rsu-border rounded-2xl p-4 font-bold text-rsu-text outline-none focus:border-rsu-orange transition-all placeholder:text-rsu-muted/40"
+                        placeholder="Enter custom department name..."
+                        value={metadata.department}
+                        onChange={(e) => setMetadata({...metadata, department: e.target.value})}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <div>
