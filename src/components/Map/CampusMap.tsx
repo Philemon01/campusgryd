@@ -78,7 +78,7 @@ function MapController({ center, zoom, onMapMove }: { center: [number, number], 
     lastTargetRef.current = { center, zoom };
     isMovingProgrammaticallyRef.current = true;
     map.setView(center, zoom, { animate: true, duration: 1 });
-  }, [center, zoom, map]);
+  }, [center[0], center[1], zoom, map]);
   
   return null;
 }

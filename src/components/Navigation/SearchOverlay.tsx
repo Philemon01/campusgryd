@@ -58,11 +58,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           {/* Start Point Search */}
           <div className={cn(
             "bg-rsu-card rounded-xl shadow-md border transition-all duration-300",
-            searchMode === 'start' ? "border-blue-400 ring-2 ring-blue-400/10" : "border-rsu-border"
+            searchMode === 'start' ? "border-rsu-orange ring-2 ring-rsu-orange/20" : "border-rsu-border"
           )}>
             <div className="flex items-center px-4 py-2.5">
               <div className="mr-3 flex flex-col items-center">
-                <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-500 bg-white" />
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-rsu-orange bg-white" />
               </div>
               <input 
                 type="text"
@@ -90,12 +90,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           {/* Destination Search */}
           <div className={cn(
             "bg-rsu-card rounded-xl shadow-md border transition-all duration-300",
-            searchMode === 'destination' ? "border-rsu-green ring-2 ring-rsu-green/10" : "border-rsu-border"
+            searchMode === 'destination' ? "border-rsu-orange ring-2 ring-rsu-orange/20" : "border-rsu-border"
           )}>
             <div className="flex items-center px-4 py-2.5">
               <button 
                 onClick={(e) => { e.stopPropagation(); onToggleChat(); }}
-                className="mr-3 p-1.5 bg-rsu-navy text-white rounded-lg hover:bg-rsu-green transition-colors relative group"
+                className="mr-3 p-1.5 bg-rsu-navy text-white rounded-lg hover:bg-rsu-orange transition-colors relative group"
                 title="Open AI Assistant"
               >
                 <MessageSquare size={16} className="group-hover:scale-110 transition-transform" />
@@ -120,11 +120,14 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 <button 
                   onClick={startListening}
                   className={cn(
-                    "p-1.5 rounded-full transition-all mr-1",
-                    isListening ? "text-red-500 animate-pulse bg-red-50" : "text-rsu-muted hover:text-rsu-navy"
+                    "p-1.5 rounded-lg transition-colors mr-1 active:scale-95 flex items-center justify-center",
+                    isListening 
+                      ? "bg-rsu-red text-white animate-pulse" 
+                      : "bg-rsu-navy text-white hover:bg-rsu-orange"
                   )}
+                  title="Voice Search"
                 >
-                  <Mic size={18} />
+                  <Mic size={16} />
                 </button>
               )}
               {(searchQuery || isNavigating || selectedLocation) && !isListening && (
@@ -195,7 +198,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
       {/* Category Filters */}
       {!isNavigating && (
-        <div className="w-full max-w-md mt-3 flex gap-2 overflow-x-auto pb-2 no-scrollbar px-2">
+        <div className="hidden w-full max-w-md mt-3 flex gap-2 overflow-x-auto pb-2 no-scrollbar px-2">
           {(['all', 'faculty', 'college', 'department', 'admin', 'library', 'gate', 'facility'] as const).map(cat => (
             <button
               key={cat}

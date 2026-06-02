@@ -2,28 +2,29 @@
 @import "tailwindcss";
 
 :root {
-  --rsu-navy: #350F11;
-  --rsu-green: #780C2C;
+  --rsu-navy: #0F172A;
+  --rsu-green: #22C55E;
   --rsu-white: #FFFFFF;
-  --rsu-bg: #F2E7DB;
-  --rsu-text: #350F11;
+  --rsu-bg: #F8FAFC;
+  --rsu-text: #0F172A;
   --rsu-card: #FFFFFF;
-  --rsu-border: #D9C7B2;
-  --rsu-muted: #6B5B4E;
-  --rsu-orange: #780C2C;
+  --rsu-border: #E2E8F0;
+  --rsu-muted: #64748B;
+  --rsu-orange: #3B82F6;
+  --rsu-red: #DC2626;
 }
 
 .dark {
-  --rsu-navy: #1A0708;
-  --rsu-navy-light: #2A0E10;
-  --rsu-green: #BF264C;
+  --rsu-navy: #1E3A8A;
+  --rsu-navy-light: #1E293B;
+  --rsu-green: #22C55E;
   --rsu-white: #FFFFFF;
-  --rsu-bg: #120304;
-  --rsu-text: #F2E7DB;
-  --rsu-card: #210D0F;
-  --rsu-border: #3D1619;
-  --rsu-muted: #AFA090;
-  --rsu-orange: #BF264C;
+  --rsu-bg: #090D16;
+  --rsu-text: #F3F4F6;
+  --rsu-card: #111827;
+  --rsu-border: #1F2937;
+  --rsu-muted: #9CA3AF;
+  --rsu-red: #DC2626;
 }
 
 @theme {
@@ -39,6 +40,7 @@
   --color-rsu-border: var(--rsu-border);
   --color-rsu-muted: var(--rsu-muted);
   --color-rsu-orange: var(--rsu-orange);
+  --color-rsu-red: var(--rsu-red);
   --color-rsu-navy-light: var(--rsu-navy-light);
 }
 

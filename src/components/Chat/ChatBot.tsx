@@ -141,10 +141,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="w-[350px] sm:w-[400px] h-[500px] bg-white dark:bg-rsu-navy-light rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+            className="w-[350px] sm:w-[400px] h-[500px] bg-slate-50 dark:bg-rsu-navy-light rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-gray-700"
           >
             {/* Header */}
-            <div className="p-4 bg-rsu-navy text-white flex items-center justify-between">
+            <div className="p-4 bg-rsu-navy text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
                   <Bot size={24} />
@@ -175,7 +175,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
             )}
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-slate-50 dark:bg-neutral-950/20">
               {messages.map((msg) => (
                 <div 
                   key={msg.id}
@@ -187,8 +187,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                   <div className={cn(
                     "p-3 rounded-2xl text-sm shadow-sm",
                     msg.sender === 'user' 
-                      ? "bg-rsu-green text-white rounded-tr-none" 
-                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-gray-700"
+                      ? "bg-rsu-green text-white rounded-tr-none shadow-md shadow-rsu-green/10" 
+                      : "bg-white dark:bg-neutral-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-slate-200 dark:border-neutral-700 font-medium"
                   )}>
                     <div className="markdown-body">
                       <Markdown>{msg.text}</Markdown>
@@ -254,10 +254,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({
 
             {/* Quick Actions */}
             {isNavigating && (
-              <div className="px-4 py-2 flex gap-2 overflow-x-auto border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-black/20">
+              <div className="px-4 py-2 flex gap-2 overflow-x-auto border-t border-slate-200 dark:border-gray-800 bg-[#F1F5F9] dark:bg-black/20 shrink-0">
                 <button 
                   onClick={onRecalculate}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-[10px] font-bold text-rsu-navy dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full text-[10px] font-bold text-rsu-navy dark:text-white hover:bg-slate-50 dark:hover:bg-gray-700 whitespace-nowrap transition-colors"
                 >
                   <RotateCcw size={12} />
                   I'M LOST / RECALCULATE
@@ -266,7 +266,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
             )}
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-rsu-navy-light">
+            <div className="p-4 border-t border-slate-200 dark:border-gray-700 bg-white dark:bg-rsu-navy-light shrink-0">
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="relative flex items-center"
@@ -276,7 +276,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="Ask for directions or a place..."
-                  className="w-full pl-4 pr-12 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rsu-navy dark:focus:ring-rsu-green text-gray-900 dark:text-white"
+                  className="w-full pl-4 pr-12 py-3 bg-slate-100 dark:bg-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rsu-navy dark:focus:ring-rsu-green text-gray-900 dark:text-white border border-slate-200 dark:border-transparent"
                 />
                 <button
                   type="submit"

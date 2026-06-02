@@ -451,7 +451,7 @@ export default function App() {
       }
     };
     updateRoutes();
-  }, [selectedLocation, startLocation, userLocation]);
+  }, [selectedLocation?.id, startLocation?.id, userLocation?.[0], userLocation?.[1]]);
 
   useEffect(() => {
     if (plannedRoutes.length > 0) {
@@ -503,7 +503,7 @@ export default function App() {
         nextManeuver();
       }
     }
-  }, [userLocation, isFollowingUser, isNavigating, currentManeuverIndex, maneuvers, startLocation]);
+  }, [userLocation?.[0], userLocation?.[1], isFollowingUser, isNavigating, currentManeuverIndex, maneuvers.length, startLocation?.id]);
 
   const handleLocateMe = () => {
     if (userLocation) {

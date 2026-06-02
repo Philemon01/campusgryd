@@ -40,12 +40,9 @@ export const Header: React.FC<HeaderProps> = ({
               Rivers State University
             </h1>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[9px] font-bold text-white bg-rsu-green px-1.5 py-0.5 rounded uppercase tracking-wider">
-                Campusgryd
+              <span className="text-[9px] font-bold text-white bg-rsu-orange px-1.5 py-0.5 rounded uppercase tracking-wider">
+                CampusGryd
               </span>
-              <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest hidden xs:block">
-                Digital Guide
-              </p>
             </div>
           </div>
         </div>

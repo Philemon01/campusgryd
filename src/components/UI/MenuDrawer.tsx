@@ -232,7 +232,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                   <GraduationCap className="text-white" size={18} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-rsu-navy uppercase tracking-tighter">RSU Digital Guide</p>
+                  <p className="text-[10px] font-black text-rsu-navy uppercase tracking-tighter">CampusGryd</p>
                   <p className="text-[8px] font-bold text-rsu-muted uppercase tracking-widest">v1.2.0 Stable</p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 {
-  "name": "Campusgryd",
+  "name": "CampusGryd",
   "description": "Interactive campus map for Rivers State University with navigation, step-by-step directions, and smart timetable sync with Google Calendar.",
   "requestFramePermissions": ["geolocation", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
