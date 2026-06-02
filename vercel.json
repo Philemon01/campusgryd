@@ -4,7 +4,11 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.ts" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/privacy(|.html)", "destination": "/privacy.html" },
+    { "source": "/privacy-policy", "destination": "/privacy.html" },
+    { "source": "/terms(|.html)", "destination": "/terms.html" },
+    { "source": "/terms-of-service", "destination": "/terms.html" },
+    { "source": "/((?!assets/|privacy|terms|favicon\\.ico|manifest\\.json|pwa-).*|$)", "destination": "/index.html" }
   ],
   "headers": [
     {

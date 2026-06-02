@@ -93,7 +93,10 @@ if (!process.env.VERCEL) {
 
 // API health check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ 
+    status: "ok", 
+    hasGeminiKey: !!process.env.GEMINI_API_KEY 
+  });
 });
 
 // Chat Intent API

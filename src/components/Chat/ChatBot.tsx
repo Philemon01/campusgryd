@@ -56,6 +56,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeminiKeyMissing, setIsGeminiKeyMissing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -65,6 +66,28 @@ export const ChatBot: React.FC<ChatBotProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      const clientKey = (import.meta.env?.VITE_GEMINI_API_KEY) || (import.meta.env?.GEMINI_API_KEY);
+      if (clientKey && clientKey !== 'undefined' && clientKey !== '') {
+        setIsGeminiKeyMissing(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.hasGeminiKey) {
+            setIsGeminiKeyMissing(true);
+          }
+        }
+      } catch (e) {
+        console.error("API key validation failed:", e);
+      }
+    };
+    checkApiKey();
+  }, []);
 
   const handleSend = async (overrideText?: string) => {
     const textToSend = overrideText || inputText;
@@ -141,6 +164,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({
                 <X size={20} />
               </button>
             </div>
+
+            {isGeminiKeyMissing && (
+              <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-350 animate-in slide-in-from-top duration-200">
+                <span className="flex-shrink-0 text-sm">⚠️</span>
+                <span>
+                  <strong>AI Support Offline:</strong> Gemini API Key is missing. Set your key in your environment to unlock full smart navigation!
+                </span>
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
