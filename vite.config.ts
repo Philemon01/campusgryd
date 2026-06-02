@@ -14,8 +14,8 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
-          name: 'RSU Campus Map',
-          short_name: 'RSU Map',
+          name: 'Campusgryd',
+          short_name: 'Campusgryd',
           description: 'Digital Guide for Rivers State University Campus',
           theme_color: '#006400',
           icons: [

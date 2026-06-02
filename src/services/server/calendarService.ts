@@ -15,7 +15,7 @@ export async function syncToGoogleCalendar(accessToken: string, slots: any[]) {
       const event = {
         summary: `${slot.courseCode}: ${slot.courseTitle}`,
         location: slot.venue,
-        description: `Lecturer: ${slot.lecturer || 'Not Specified'}\nSynced from RSU Campus Map`,
+        description: `Lecturer: ${slot.lecturer || 'Not Specified'}\nSynced from Campusgryd`,
         start: {
           dateTime: start,
           timeZone: 'Africa/Lagos',

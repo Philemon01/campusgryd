@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-bold text-white bg-rsu-green px-1.5 py-0.5 rounded uppercase tracking-wider">
-                Campus Map
+                Campusgryd
               </span>
               <p className="text-[10px] font-bold text-rsu-muted uppercase tracking-widest hidden xs:block">
                 Digital Guide
