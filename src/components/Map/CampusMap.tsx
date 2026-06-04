@@ -366,7 +366,7 @@ export const CampusMap: React.FC<CampusMapProps & {
                 </button>
                 <button
                   onClick={() => setStartLocation?.(loc)}
-                  className="w-full bg-white border border-rsu-navy text-rsu-navy py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rsu-navy/5 transition-all"
+                  className="w-full bg-white dark:bg-rsu-card border border-rsu-navy text-rsu-navy dark:text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rsu-navy/5 transition-all"
                 >
                   Set as Start Point
                 </button>

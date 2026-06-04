@@ -160,3 +160,73 @@ html, body, #root {
   background-color: rgba(255,255,255,0.1);
 }
 
+/* Modern Theme Leaflet Popup Custom Styling */
+.leaflet-popup-content-wrapper {
+  background: var(--color-rsu-card) !important;
+  color: var(--color-rsu-text) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(var(--color-rsu-border), 0.2) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+.leaflet-popup-tip {
+  background: var(--color-rsu-card) !important;
+}
+
+/* Dark Mode Blue Text & Icon Contrast Override */
+.dark .text-rsu-navy,
+.dark .text-rsu-orange,
+.dark .text-blue-500,
+.dark .text-blue-600,
+.dark .text-sky-500,
+.dark .text-sky-600,
+.dark .hover\:text-rsu-navy:hover,
+.dark .hover\:text-rsu-orange:hover,
+.dark .text-rsu-navy\/70,
+.dark .text-rsu-navy\/60,
+.dark .text-rsu-navy\/40,
+.dark .text-rsu-navy\/30 {
+  color: #FFFFFF !important;
+}
+
+/* Ensure svgs inheriting these classes also render white */
+.dark .text-rsu-navy svg,
+.dark .text-rsu-orange svg,
+.dark .text-blue-500 svg,
+.dark .text-blue-600 svg,
+.dark .text-sky-500 svg,
+.dark .text-sky-600 svg,
+.dark .hover\:text-rsu-navy:hover svg,
+.dark .hover\:text-rsu-orange:hover svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+/* Light/Dark mode non-white backgrounds contrast override */
+.bg-rsu-navy .text-rsu-orange,
+.bg-rsu-navy .text-rsu-navy,
+.bg-rsu-navy .text-blue-500,
+.bg-rsu-navy .text-blue-600,
+.bg-rsu-green .text-rsu-orange,
+.bg-rsu-green .text-rsu-navy {
+  color: #FFFFFF !important;
+}
+
+.bg-rsu-navy svg,
+.bg-rsu-navy .text-rsu-orange svg,
+.bg-rsu-green svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+/* Hover background non-white states override */
+.hover\:bg-rsu-navy:hover .text-rsu-orange,
+.hover\:bg-rsu-navy:hover .text-rsu-navy {
+  color: #FFFFFF !important;
+}
+
+.hover\:bg-rsu-navy:hover svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+

@@ -53,7 +53,7 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
     <AnimatePresence>
       <motion.div
         initial={{ y: '100%' }}
-        animate={{ y: isPanelExpanded ? 0 : '65%' }}
+        animate={{ y: isPanelExpanded ? 0 : '50%' }}
         exit={{ y: '100%' }}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}

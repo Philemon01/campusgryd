@@ -93,7 +93,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ onClose, onNavigateTo 
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   key={event.id}
-                  className="bg-white rounded-2xl p-4 border border-rsu-border/20 shadow-sm hover:shadow-md transition-shadow group"
+                  className="bg-white dark:bg-rsu-card rounded-2xl p-4 border border-rsu-border/20 shadow-sm hover:shadow-md transition-shadow group"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter ${getCategoryColor(event.category)}`}>

@@ -1070,7 +1070,7 @@ export const TimetablePanel: React.FC<TimetablePanelProps> = ({ onClose, onNavig
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDialog(null)}
-                  className="flex-1 py-3 bg-white border border-rsu-border rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer select-none"
+                  className="flex-1 py-3 bg-white dark:bg-rsu-card border border-rsu-border rounded-xl font-black text-[10px] text-rsu-navy dark:text-white uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer select-none"
                 >
                   Cancel
                 </button>

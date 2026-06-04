@@ -43,7 +43,8 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
           "p-3 rounded-full shadow-lg border transition-all duration-300 flex items-center justify-center",
           isSatelliteView 
             ? "bg-[#4285F4] text-white border-[#4285F4]" 
-            : "bg-white text-rsu-navy border-rsu-border hover:bg-rsu-navy/10"
+            : "bg-white text-rsu-navy border-rsu-border hover:bg-rsu-navy/10",
+          "dark:bg-white dark:text-rsu-green dark:border-white dark:hover:bg-rsu-orange dark:hover:text-white dark:hover:border-rsu-orange"
         )}
         title={isSatelliteView ? "Switch to Map View" : "Switch to Satellite View"}
       >

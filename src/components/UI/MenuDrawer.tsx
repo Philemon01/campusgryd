@@ -101,7 +101,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                       <>
                         <button 
                           onClick={onSignIn}
-                          className="w-full py-2.5 bg-white border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm cursor-pointer"
+                          className="w-full py-2.5 bg-white dark:bg-rsu-card border-2 border-rsu-border/20 rounded-xl font-black text-[10px] text-rsu-navy dark:text-white uppercase tracking-widest hover:bg-rsu-navy hover:text-white transition-all shadow-sm cursor-pointer"
                         >
                           Sync with Popup
                         </button>

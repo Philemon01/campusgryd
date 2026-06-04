@@ -16,6 +16,7 @@ import { getCategoryIcon, createCustomIcon } from './lib/icons';
 
 // Components
 import { CampusMap } from './components/Map/CampusMap';
+import { LandingPage } from './components/UI/LandingPage';
 import { NavigationHUD } from './components/Navigation/NavigationHUD';
 import { SearchOverlay } from './components/Navigation/SearchOverlay';
 import { InfoPanel } from './components/Navigation/InfoPanel';
@@ -1083,6 +1084,27 @@ export default function App() {
     return null;
   }
 
+  if (currentPath === '/') {
+    return (
+      <LandingPage 
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        onNavigateToMap={(initialLocation, openTimetable, openEvents) => {
+          if (initialLocation) {
+            handleLocationSelect(initialLocation);
+          }
+          if (openTimetable) {
+            setIsTimetableOpen(true);
+          }
+          if (openEvents) {
+            setIsEventsPanelOpen(true);
+          }
+          navigate('/map');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-rsu-bg">
       <CampusMap 
@@ -1117,6 +1139,7 @@ export default function App() {
         setIsMenuOpen={setIsMenuOpen}
         setIsVoiceAssistEnabled={setIsVoiceAssistEnabled}
         setIsDarkMode={setIsDarkMode}
+        onNavigateHome={() => navigate('/')}
       />
 
       <NavigationHUD 
