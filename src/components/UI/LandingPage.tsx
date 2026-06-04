@@ -85,9 +85,20 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
   const [simStepIdx, setSimStepIdx] = useState(0);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simProgress, setSimProgress] = useState(0);
+  const [panelMode, setPanelMode] = useState<'map' | 'schedule'>('map');
+  const [manualOverride, setManualOverride] = useState(false);
 
   // FAQ accordion active state
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  // Auto alternation between walking map trace and class timetable view
+  useEffect(() => {
+    if (manualOverride) return;
+    const rotateInterval = setInterval(() => {
+      setPanelMode((prev) => (prev === 'map' ? 'schedule' : 'map'));
+    }, 7500); // alternating every 7.5 seconds
+    return () => clearInterval(rotateInterval);
+  }, [manualOverride]);
 
   // Simulated live route progression
   useEffect(() => {
@@ -443,148 +454,323 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
-          className="flex-1 w-full max-w-lg lg:max-w-none relative rounded-3xl overflow-hidden border shadow-2xl bg-slate-900 dark:bg-slate-950 border-slate-850 group"
+          className="flex-1 w-full max-w-lg lg:max-w-none relative rounded-3xl overflow-hidden border shadow-2xl bg-slate-900 dark:bg-slate-950 border-slate-850 group flex flex-col justify-between"
         >
           {/* Simulation Header Overlays */}
-          <div className="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-slate-950/80 to-transparent z-20 flex items-center justify-between border-b border-slate-800/30">
+          <div className="p-4 bg-gradient-to-b from-slate-950/90 to-slate-950/30 z-20 flex items-center justify-between border-b border-slate-800/40">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-[10px] font-mono font-bold text-slate-300 uppercase tracking-widest">
-                RSU WALKING MAP (OSRM HUD PREVIEW)
+                {panelMode === 'map' ? "LIVE RSU PATH PREVIEW (OSRM COORDS)" : "CAMPUS SCHEDULE INTEGRATION"}
               </span>
             </div>
             
-            {/* Play Simulation Trigger Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsSimulating(!isSimulating);
-              }}
-              className={cn(
-                "px-3 py-1 rounded-lg text-[9px] font-mono font-black uppercase tracking-wider transition-all shadow-md active:scale-90",
-                isSimulating 
-                  ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" 
-                  : "bg-blue-500 text-white hover:bg-blue-600 font-black"
+            {/* Play/Mode toggles */}
+            <div className="flex items-center gap-2">
+              {panelMode === 'map' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSimulating(!isSimulating);
+                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[8px] font-mono font-black uppercase tracking-wider transition-all active:scale-95",
+                    isSimulating 
+                      ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" 
+                      : "bg-blue-600 text-white hover:bg-blue-500"
+                  )}
+                >
+                  {isSimulating ? "PAUSE" : "WALK"}
+                </button>
               )}
-            >
-              {isSimulating ? "PAUSE PREVIEW" : "SIMULATE WALK"}
-            </button>
+
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPanelMode('map');
+                    setManualOverride(true);
+                  }}
+                  className={cn(
+                    "p-1 px-2 rounded text-[7.5px] font-mono font-black uppercase transition-all tracking-wider",
+                    panelMode === 'map' ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Map
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPanelMode('schedule');
+                    setManualOverride(true);
+                  }}
+                  className={cn(
+                    "p-1 px-2 rounded text-[7.5px] font-mono font-black uppercase transition-all tracking-wider",
+                    panelMode === 'schedule' ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Timetable
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Interactive Route Presentation Area */}
-          <div className="w-full h-96 min-h-[384px] bg-slate-950 flex flex-col justify-between p-5 relative select-none">
-            
-            {/* Grid Vector Aesthetic Map Background */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:2.8rem_2.8rem] opacity-25 z-0" />
-            
-            {/* Simulated Path Line and glowing checkpoints */}
-            <div className="absolute left-[30%] right-[30%] top-[45%] h-1 bg-slate-800 rounded z-1">
-              {/* Animating pathway index highlight */}
-              <div 
-                className="h-full bg-gradient-to-r from-blue-600 to-sky-500 rounded-full transition-all duration-150 relative"
-                style={{ width: isSimulating ? `${simProgress}%` : `${(simStepIdx / (SIM_ROUTE.length - 1)) * 100}%` }}
-              >
-                {/* Simulated Moving Walker Footprint Icon */}
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-400 text-slate-950 flex items-center justify-center shadow-lg shadow-blue-400/50 animate-bounce">
-                  <Footprints size={12} />
-                </div>
-              </div>
-            </div>
+          <div className="w-full h-96 min-h-[384px] bg-slate-950 relative select-none overflow-hidden">
+            <AnimatePresence mode="wait">
+              {panelMode === 'map' ? (
+                <motion.div
+                  key="map-simulation"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute inset-0 p-5 flex flex-col justify-between"
+                >
+                  {/* Grid Vector Aesthetic Map Background with scalable SVG */}
+                  <div className="absolute inset-0 z-0">
+                    <svg className="w-full h-full opacity-35" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern id="rsu-hero-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                          <circle cx="2" cy="2" r="1" fill="#334155" opacity="0.35" />
+                        </pattern>
+                      </defs>
+                      <rect width="100%" height="100%" fill="url(#rsu-hero-grid)" />
+                      
+                      {/* Stylized Pedestrian Pathways around RSU Campus */}
+                      {/* Main Boulevard starting from top-right down past Chapel to South Gate */}
+                      <path d="M 370,40 L 290,110 L 295,170 L 200,190 Q 150,195 120,180" stroke="#1e293b" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M 370,40 L 290,110 L 295,170 L 200,190 Q 150,195 120,180" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-            {/* Custom Checkpoint Icons Placed Visually on Map */}
-            <div className="absolute left-[15%] top-[40%] z-5 text-center">
-              <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all border shadow-lg",
-                simStepIdx >= 0 ? "bg-blue-500 border-white text-slate-950" : "bg-slate-900 border-slate-700 text-slate-450"
-              )}>
-                🚪
-              </div>
-              <p className="text-[8px] font-mono font-bold text-slate-400 mt-1">MAIN GATE</p>
-            </div>
+                      {/* Main Gate bypass directly heading west to Library and PG center */}
+                      <path d="M 370,40 L 220,50 L 120,110 L 30,110" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+                      <path d="M 370,40 L 220,50 L 120,110 L 30,110" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
 
-            <div className="absolute left-[45%] top-[15%] z-5 text-center">
-              <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all border shadow-lg",
-                simStepIdx >= 1 ? "bg-blue-500 border-white text-slate-950" : "bg-slate-900 border-slate-700 text-slate-450"
-              )}>
-                ⛪
-              </div>
-              <p className="text-[8px] font-mono font-bold text-slate-400 mt-1">CHAPEL</p>
-            </div>
+                      {/* Library to Convocation Arena link down to Admin Senate */}
+                      <path d="M 30,110 L 120,135 L 120,180" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
 
-            <div className="absolute left-[75%] top-[55%] z-5 text-center">
-              <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all border shadow-lg",
-                simStepIdx >= 3 ? "bg-blue-500 border-white text-slate-950" : "bg-slate-900 border-slate-700 text-slate-450"
-              )}>
-                🏛️
-              </div>
-              <p className="text-[8px] font-mono font-bold text-slate-400 mt-1">NEW SENATE</p>
-            </div>
+                      {/* Highlighting Active Dynamic Walker Simulated Path (Main Gate -> Chapel -> Senate) */}
+                      <path 
+                        d="M 370,40 L 290,110 L 295,170 L 200,190 H 120" 
+                        stroke="rgba(59, 130, 246, 0.2)" 
+                        strokeWidth="8" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                      <path 
+                        d="M 370,40 L 290,110 L 295,170 L 200,190 H 120" 
+                        stroke="#3b82f6" 
+                        strokeWidth="2.5" 
+                        strokeDasharray="5 3"
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    </svg>
+                  </div>
 
-            <div className="pt-14 z-10" />
+                  {/* Node Pins on Map */}
+                  <div className="absolute left-[88%] top-[12%] z-5 text-center -translate-x-1/2">
+                    <div className={cn(
+                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
+                      simStepIdx >= 0 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
+                    )}>
+                      🚪
+                    </div>
+                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">GATE</p>
+                  </div>
 
-            {/* Live Navigation Guidance Box */}
-            <div className="w-full max-w-sm mt-auto mx-auto space-y-3 p-4 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="p-1 px-2.5 bg-blue-500/10 text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-wider border border-blue-500/20">
-                    Live Simulator Output
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-400 font-bold uppercase">WALK MODE</span>
-                </div>
-                <div className="text-[9px] font-mono text-blue-400 font-bold bg-white/5 px-2 py-0.5 rounded">
-                  OSRM GEOSTREP V5
-                </div>
-              </div>
+                  <div className="absolute left-[72%] top-[39%] z-5 text-center -translate-x-1/2">
+                    <div className={cn(
+                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
+                      simStepIdx >= 1 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
+                    )}>
+                      ⛪
+                    </div>
+                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">CHAPEL</p>
+                  </div>
 
-              {/* Informative Step Detail layout with slide animations */}
-              <div className="min-h-[50px] transition-all duration-300">
-                <p className="text-[9px] font-mono text-blue-500 font-bold uppercase tracking-wider">
-                  Step {simStepIdx + 1} of {SIM_ROUTE.length}: {SIM_ROUTE[simStepIdx].name}
-                </p>
-                <h4 className="text-sm font-display font-black text-white uppercase tracking-tight mt-0.5">
-                  {SIM_ROUTE[simStepIdx].instruction}
-                </h4>
-              </div>
+                  <div className="absolute left-[26%] top-[70%] z-5 text-center -translate-x-1/2">
+                    <div className={cn(
+                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
+                      simStepIdx >= 3 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
+                    )}>
+                      🏛️
+                    </div>
+                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">SENATE</p>
+                  </div>
 
-              {/* Numeric Stats Row */}
-              <div className="grid grid-cols-3 gap-3 border-t border-slate-800/80 pt-2.5 text-center">
-                <div>
-                  <p className="text-[8px] font-mono text-slate-450 uppercase font-black">PROGRESS</p>
-                  <p className="text-xs font-bold text-white mt-0.5">{isSimulating ? Math.round(simProgress) : 100}%</p>
-                </div>
-                <div>
-                  <p className="text-[8px] font-mono text-slate-450 uppercase font-black">ACCUM. TIME</p>
-                  <p className="text-xs font-bold text-blue-400 mt-0.5">{SIM_ROUTE[simStepIdx].duration}</p>
-                </div>
-                <div>
-                  <p className="text-[8px] font-mono text-slate-450 uppercase font-black">ACCUM. DIST</p>
-                  <p className="text-xs font-bold text-white mt-0.5">{SIM_ROUTE[simStepIdx].distance}</p>
-                </div>
-              </div>
-            </div>
+                  {/* Animated walking point based on scale */}
+                  {(() => {
+                    const nodes = [
+                      { x: 370, y: 40 },  // Main Gate
+                      { x: 290, y: 110 }, // Chapel
+                      { x: 295, y: 170 }, // Interm
+                      { x: 120, y: 180 }  // Senate
+                    ];
+                    const startNode = nodes[simStepIdx] || nodes[0];
+                    const nextIndex = (simStepIdx + 1) % nodes.length;
+                    const endNode = nodes[nextIndex] || nodes[1];
+                    const fraction = simProgress / 100;
+                    
+                    const posX = startNode.x + (endNode.x - startNode.x) * fraction;
+                    const posY = startNode.y + (endNode.y - startNode.y) * fraction;
+
+                    return (
+                      <div 
+                        className="absolute z-10 transition-all duration-150"
+                        style={{ 
+                          left: `${(posX / 400) * 100}%`, 
+                          top: `${(posY / 240) * 100}%`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <div className="relative">
+                          <span className="absolute inset-0 rounded-full bg-blue-500/40 animate-ping" />
+                          <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-500/40 border border-white">
+                            <Footprints size={11} className="animate-bounce" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="pt-2" />
+
+                  {/* Live Navigation Guidance Box */}
+                  <div className="w-full max-w-sm mx-auto space-y-2.5 p-3.5 bg-slate-900/95 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl z-10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="p-0.5 px-2 bg-blue-500/10 text-blue-400 rounded text-[8px] font-black uppercase tracking-wider border border-blue-500/20">
+                          OSRM HUD PREVIEW
+                        </span>
+                        <span className="text-[8px] font-mono text-slate-400 font-bold uppercase">LIVE SIM</span>
+                      </div>
+                      <div className="text-[8px] font-mono text-blue-400 font-bold bg-white/5 px-2 py-0.5 rounded border border-slate-800">
+                        WALK ON RSU
+                      </div>
+                    </div>
+
+                    <div className="min-h-[42px] transition-all duration-300">
+                      <p className="text-[8px] font-mono text-blue-500 font-bold uppercase tracking-wider">
+                        STEP {simStepIdx + 1} OF {SIM_ROUTE.length}: {SIM_ROUTE[simStepIdx].name}
+                      </p>
+                      <h4 className="text-xs font-display font-medium text-white uppercase tracking-tight mt-0.5 leading-tight">
+                        {SIM_ROUTE[simStepIdx].instruction}
+                      </h4>
+                    </div>
+
+                    {/* Numeric Stats Row */}
+                    <div className="grid grid-cols-3 gap-2 border-t border-slate-850 pt-2 text-center">
+                      <div>
+                        <p className="text-[7.5px] font-mono text-slate-450 uppercase font-black tracking-wide">PROGRESS</p>
+                        <p className="text-[10px] font-bold text-white mt-0.5">{isSimulating ? Math.round(simProgress) : 100}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[7.5px] font-mono text-slate-450 uppercase font-black tracking-wide">ACCUM. TIME</p>
+                        <p className="text-[10px] font-bold text-blue-400 mt-0.5">{SIM_ROUTE[simStepIdx].duration}</p>
+                      </div>
+                      <div>
+                        <p className="text-[7.5px] font-mono text-slate-450 uppercase font-black tracking-wide">DISTANCE</p>
+                        <p className="text-[10px] font-bold text-white mt-0.5">{SIM_ROUTE[simStepIdx].distance}</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="timetable-simulation"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute inset-0 p-5 flex flex-col justify-between"
+                >
+                  <div className="space-y-3 z-10 w-full mt-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={13} className="text-blue-400" />
+                        <span className="text-[10px] font-mono font-black text-white uppercase tracking-wider">
+                          STUDENT CLASS CALENDAR
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded uppercase font-bold">
+                        DAILY SYNC
+                      </span>
+                    </div>
+
+                    {/* Display modern schedule tasks */}
+                    <div className="space-y-2">
+                      
+                      {/* Class Item 1 - Completed */}
+                      <div className="p-2.5 bg-slate-900/30 border border-slate-900 rounded-xl flex items-center justify-between opacity-50 relative overflow-hidden">
+                        <div>
+                          <p className="text-[7.5px] font-mono text-slate-400 uppercase font-bold">09:00 AM - GST 111</p>
+                          <h5 className="text-[11px] font-black text-slate-300 uppercase leading-none mt-0.5">PEACE & CONFLICT STUDIES</h5>
+                          <p className="text-[9px] text-slate-450 mt-1">Venue: Convocation Arena</p>
+                        </div>
+                        <span className="text-emerald-500 font-bold text-xs bg-emerald-500/10 p-1 px-2 rounded">✓</span>
+                      </div>
+
+                      {/* Class Item 2 - LIVE NEXT/NAVIGATING */}
+                      <div className="p-3 bg-blue-950/20 border border-blue-900/40 rounded-xl relative ring-1 ring-blue-500/20">
+                        <span className="absolute right-2 top-2 w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                        <div>
+                          <p className="text-[7.5px] font-mono text-blue-400 font-bold uppercase tracking-wide">11:30 AM - COE 510 • ACTIVE CLASS NOW</p>
+                          <h5 className="text-xs font-display font-black text-white uppercase leading-tight mt-0.5">COMPUTER ARCHITECTURE & INGRESS</h5>
+                          <p className="text-[9px] text-slate-300 mt-1 flex items-center gap-1">
+                            <MapPin size={9} className="text-blue-500" />
+                            Faculty of Engineering • Lecture Hall B
+                          </p>
+                        </div>
+
+                        <div className="mt-2 text-[9px] text-slate-400 font-mono flex items-center justify-between border-t border-blue-900/20 pt-2">
+                          <span>Route Map: 5 mins fast walk</span>
+                          <button
+                            onClick={() => {
+                              onNavigateToMap(null, true);
+                            }}
+                            className="px-2 py-0.5 bg-blue-550 hover:bg-blue-500 text-white font-mono text-[8px] font-black rounded uppercase tracking-wider flex items-center gap-1 transition-all"
+                          >
+                            Trace OSRM Path 🚶
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Class Item 3 - Upcoming */}
+                      <div className="p-2.5 bg-slate-900/30 border border-slate-900 rounded-xl flex items-center justify-between opacity-75">
+                        <div>
+                          <p className="text-[7.5px] font-mono text-slate-450 uppercase font-bold">02:30 PM - MTH 211</p>
+                          <h5 className="text-[11px] font-black text-slate-400 uppercase leading-none mt-0.5">MATHEMATICAL ANALYSIS II</h5>
+                          <p className="text-[9px] text-slate-500 mt-1">Venue: Faculty of Sciences Lab</p>
+                        </div>
+                        <span className="text-[8px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded">UPCOMING</span>
+                      </div>
+
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-            {/* Bottom Floating Info bar */}
-            <div className="flex items-center justify-between mt-3 w-full bg-slate-900/40 border border-slate-800/60 p-2.5 rounded-xl z-10 backdrop-blur-sm self-end">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                  <Compass size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
-                </div>
-                <div>
-                  <p className="text-[9px] font-black text-white uppercase">Try live OSRM guidance</p>
-                  <p className="text-[8px] text-slate-400">Tested pathways around 55+ RSU locations</p>
-                </div>
+          {/* Bottom Floating Info bar */}
+          <div className="p-3 bg-slate-900/40 border-t border-slate-800/60 flex items-center justify-between gap-3 text-left">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                <Compass size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
               </div>
-              <button 
-                onClick={() => onNavigateToMap()}
-                className="p-1 px-3 bg-blue-500 hover:bg-blue-400 text-white font-mono text-[9px] font-black rounded-lg transition-all"
-              >
-                ENTER MAP
-              </button>
+              <div>
+                <p className="text-[9px] font-black text-white uppercase">Rivers State University Map</p>
+                <p className="text-[8px] text-slate-400 leading-none mt-0.5">Pedestrian walking routes & class timetable sync</p>
+              </div>
             </div>
-
+            <button 
+              onClick={() => onNavigateToMap()}
+              className="p-1 px-3 bg-blue-600 hover:bg-blue-500 text-white font-mono text-[9px] font-black rounded-lg transition-all active:scale-95"
+            >
+              ENTER MAP
+            </button>
+          </div>
         </motion.div>
       </section>
 
