@@ -10,7 +10,7 @@ import { locations } from './data/locations';
 import { campusEvents } from './data/events';
 import mapFeaturesData from './data/rsu-map-features.json';
 import { Location, Maneuver, RouteOption } from './types';
-import { cn } from './lib/utils';
+import { cn, triggerHaptic } from './lib/utils';
 import { RSU_CENTER, DEFAULT_ZOOM } from './constants';
 import { getCategoryIcon, createCustomIcon } from './lib/icons';
 
@@ -667,6 +667,7 @@ export default function App() {
 
   const handleLocationSelect = React.useCallback(async (loc: Location | null) => {
     if (loc) {
+      triggerHaptic(15);
       setRecentLocationIds(prev => {
         const filtered = prev.filter(id => id !== loc.id);
         return [loc.id, ...filtered].slice(0, 5);
@@ -911,6 +912,7 @@ export default function App() {
       setManeuvers(activeRoute.maneuvers);
       setCurrentManeuverIndex(0);
       setIsNavigating(true);
+      triggerHaptic([40, 50, 40]);
       setNavigationPath(activeRoute.path);
       
       // Auto-follow user only if starting from current location
@@ -1069,10 +1071,17 @@ export default function App() {
       setCurrentManeuverIndex(nextIndex);
       setMapView(prev => ({ ...prev, center: maneuvers[nextIndex].coordinates, zoom: 19 }));
       if (isVoiceAssistEnabled) playVoiceDirections(maneuvers[nextIndex].instruction);
+      
+      if (maneuvers[nextIndex].type === 'destination') {
+        triggerHaptic([100, 50, 100, 50, 200]);
+      } else {
+        triggerHaptic([40, 40, 40]);
+      }
     } else {
       setIsNavigating(false);
       setManeuvers([]);
       setCurrentManeuverIndex(-1);
+      triggerHaptic([100, 50, 100, 50, 200]);
     }
   }, [currentManeuverIndex, maneuvers, isVoiceAssistEnabled, playVoiceDirections]);
 
@@ -1117,11 +1126,15 @@ export default function App() {
         navigationPath={navigationPath}
         mapFeatures={mapFeaturesData}
         onLocationSelect={(loc) => {
+          if (loc) triggerHaptic(15);
           setSelectedLocation(loc);
           setMapView({ center: loc.coordinates, zoom: 18 });
           setIsFollowingUser(false);
         }}
-        setStartLocation={setStartLocation}
+        setStartLocation={(loc) => {
+          if (loc) triggerHaptic(15);
+          setStartLocation(loc);
+        }}
         createCustomIcon={createCustomIcon}
         onMapMove={onMapMove}
         mapRotation={mapRotation}

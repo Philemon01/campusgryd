@@ -229,4 +229,108 @@ html, body, #root {
   stroke: #FFFFFF !important;
 }
 
+/* Core Light Mode White-on-White Text Preventer */
+.b {
+  color: #000000;
+}
+.dark .b {
+  color: #FFFFFF !important;
+}
+
+html:not(.dark) .b,
+html:not(.dark) .text-white,
+html:not(.dark) [class*="text-white"],
+html:not(.dark) [class*="text-slate-50"],
+html:not(.dark) [class*="text-slate-100"],
+html:not(.dark) [class*="text-slate-200"],
+html:not(.dark) [class*="text-slate-300"],
+html:not(.dark) [class*="text-gray-50"],
+html:not(.dark) [class*="text-gray-100"],
+html:not(.dark) [class*="text-gray-200"],
+html:not(.dark) [class*="text-gray-300"] {
+  color: #000000 !important;
+}
+
+/* Exemptions: elements rendered on designated dark/colored containers inside light mode */
+/* Descendant selectors */
+html:not(.dark) [class*="bg-rsu-navy"] [class*="text-white"],
+html:not(.dark) [class*="bg-rsu-green"] [class*="text-white"],
+html:not(.dark) [class*="bg-rsu-orange"] [class*="text-white"],
+html:not(.dark) [class*="bg-blue-"] [class*="text-white"],
+html:not(.dark) [class*="bg-slate-8"] [class*="text-white"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-white"],
+html:not(.dark) [class*="bg-gray-8"] [class*="text-white"],
+html:not(.dark) [class*="bg-gray-9"] [class*="text-white"],
+html:not(.dark) [class*="bg-red-"] [class*="text-white"],
+html:not(.dark) [class*="bg-emerald-"] [class*="text-white"],
+html:not(.dark) [class*="bg-indigo-"] [class*="text-white"],
+html:not(.dark) [class*="bg-amber-"] [class*="text-white"],
+html:not(.dark) [class*="bg-[#4285F4]"] [class*="text-white"],
+html:not(.dark) [class*="bg-[#0a2e5c]"] [class*="text-white"],
+html:not(.dark) [class*="bg-gradient-to-"] [class*="text-white"],
+html:not(.dark) [class*="bg-black"] [class*="text-white"],
+
+/* Same element/self-selectors */
+html:not(.dark) [class*="bg-rsu-navy"][class*="text-white"],
+html:not(.dark) [class*="bg-rsu-green"][class*="text-white"],
+html:not(.dark) [class*="bg-rsu-orange"][class*="text-white"],
+html:not(.dark) [class*="bg-blue-"][class*="text-white"],
+html:not(.dark) [class*="bg-slate-8"][class*="text-white"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-white"],
+html:not(.dark) [class*="bg-gray-8"][class*="text-white"],
+html:not(.dark) [class*="bg-gray-9"][class*="text-white"],
+html:not(.dark) [class*="bg-red-"][class*="text-white"],
+html:not(.dark) [class*="bg-emerald-"][class*="text-white"],
+html:not(.dark) [class*="bg-indigo-"][class*="text-white"],
+html:not(.dark) [class*="bg-amber-"][class*="text-white"],
+html:not(.dark) [class*="bg-[#4285F4]"][class*="text-white"],
+html:not(.dark) [class*="bg-[#0a2e5c]"][class*="text-white"],
+html:not(.dark) [class*="bg-gradient-to-"][class*="text-white"],
+html:not(.dark) [class*="bg-black"][class*="text-white"] {
+  color: #FFFFFF !important;
+}
+
+/* Restore light/blue/slate text colors for intended dark/colored parent containers in light mode */
+html:not(.dark) [class*="bg-slate-8"] [class*="text-slate-100"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-slate-100"],
+html:not(.dark) [class*="bg-slate-8"] [class*="text-slate-200"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-slate-200"],
+html:not(.dark) [class*="bg-slate-8"] [class*="text-slate-300"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-slate-300"],
+html:not(.dark) [class*="bg-rsu-navy"] [class*="text-slate-100"],
+html:not(.dark) [class*="bg-rsu-navy"] [class*="text-slate-200"],
+html:not(.dark) [class*="bg-rsu-navy"] [class*="text-slate-300"],
+html:not(.dark) [class*="bg-gradient-to-"] [class*="text-blue-100"],
+html:not(.dark) [class*="bg-gradient-to-"] [class*="text-blue-300"],
+html:not(.dark) [class*="bg-slate-8"][class*="text-slate-100"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-slate-100"],
+html:not(.dark) [class*="bg-slate-8"][class*="text-slate-200"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-slate-200"],
+html:not(.dark) [class*="bg-slate-8"][class*="text-slate-300"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-slate-300"],
+html:not(.dark) [class*="bg-rsu-navy"][class*="text-slate-100"],
+html:not(.dark) [class*="bg-rsu-navy"][class*="text-slate-200"],
+html:not(.dark) [class*="bg-rsu-navy"][class*="text-slate-300"],
+html:not(.dark) [class*="bg-gradient-to-"][class*="text-blue-100"],
+html:not(.dark) [class*="bg-gradient-to-"][class*="text-blue-300"] {
+  color: #E2E8F0 !important;
+}
+
+/* Custom specific light text color restores inside those backgrounds */
+html:not(.dark) [class*="bg-slate-8"] [class*="text-blue-300"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-rose-300"],
+html:not(.dark) [class*="bg-slate-9"] [class*="text-blue-300"],
+html:not(.dark) [class*="bg-gradient-to-"] [class*="text-blue-300"],
+html:not(.dark) [class*="bg-slate-8"][class*="text-blue-300"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-rose-300"],
+html:not(.dark) [class*="bg-slate-9"][class*="text-blue-300"],
+html:not(.dark) [class*="bg-gradient-to-"][class*="text-blue-300"] {
+  color: #93C5FD !important; /* Restore blue-300 */
+}
+html:not(.dark) [class*="bg-gradient-to-"] [class*="text-blue-100"],
+html:not(.dark) [class*="bg-gradient-to-"][class*="text-blue-100"] {
+  color: #DBEAFE !important; /* Restore blue-100 */
+}
+
+
 

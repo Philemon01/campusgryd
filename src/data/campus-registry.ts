@@ -21,15 +21,15 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "description": "Parking and green area near the main entrance.",
     "landmark": "Main Gate"
   },
-  "catholic_church": {
-    "name": "Our lady seat of wisdom catholic church",
-    "aliases": ["Catholic Church", "Seat of Wisdom"],
-    "lat": 4.8021941610458905,
-    "lng": 6.984476633369923,
-    "address": "Campus Road",
+  "deeper_life": {
+    "name": "Deeper Life Campus Fellowship RSU Main",
+    "aliases": ["DLCF"],
+    "lat": 4.795673515964436,
+    "lng": 6.9807664677500725,
+    "address": "Fellowship Area",
     "type": "facility",
-    "description": "University Catholic Chaplaincy.",
-    "landmark": "Church Area"
+    "description": "Campus Christian fellowship center.",
+    "landmark": "Near Engineering"
   },
   "chapel_redemption": {
     "name": "chapel of redemption",
@@ -311,15 +311,15 @@ export const CAMPUS_REGISTRY: Record<string, CampusEntry> = {
     "description": "Major through-road in the campus center.",
     "landmark": "Medical School Area"
   },
-  "deeper_life": {
-    "name": "Deeper Life Campus Fellowship RSU Main",
-    "aliases": ["DLCF"],
-    "lat": 4.795673515964436,
-    "lng": 6.9807664677500725,
-    "address": "Fellowship Area",
+  "catholic_church": {
+    "name": "Our lady seat of wisdom catholic church",
+    "aliases": ["Catholic Church", "Seat of Wisdom"],
+    "lat": 4.8021941610458905,
+    "lng": 6.984476633369923,
+    "address": "Campus Road",
     "type": "facility",
-    "description": "Campus Christian fellowship center.",
-    "landmark": "Near Engineering"
+    "description": "University Catholic Chaplaincy.",
+    "landmark": "Church Area"
   },
   "shell_centre": {
     "name": "shell centre for excellence in marine",

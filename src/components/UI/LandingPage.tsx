@@ -26,6 +26,9 @@ import {
   Briefcase,
   ExternalLink
 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import { createCustomIcon } from '../../lib/icons';
 import { locations } from '../../data/locations';
 import { Location, LocationType } from '../../types';
 import { cn } from '../../lib/utils';
@@ -44,6 +47,29 @@ interface SimStep {
   instruction: string;
   markerId: string;
 }
+
+const SIM_COORDS: Record<string, [number, number]> = {
+  gate: [4.804043, 6.986824],
+  chapel: [4.799828, 6.984681],
+  center: [4.801372, 6.982447],
+  senate: [4.799501, 6.982339]
+};
+
+const walkerIcon = typeof window !== 'undefined' ? L.divIcon({
+  className: 'walker-marker-highlight',
+  html: `
+    <div class="relative flex items-center justify-center w-8 h-8">
+      <div class="absolute w-12 h-12 bg-blue-500/20 rounded-full animate-ping" style="animation-duration: 2s;"></div>
+      <div class="absolute w-8 h-8 bg-blue-500 rounded-full border border-white flex items-center justify-center shadow-md">
+        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-white animate-pulse" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 21.5c-.1.5.3 1 1 1h.5c.4 0 .8-.3.9-.7l2.1-7.3 2.1 3.5c.3.5.8.8 1.4.8h1.5l-3.3-5.5.9-4.3c1.2 1.4 3 2.2 4.9 2.2V10c-1.5 0-2.9-.8-3.7-2.1L13 6.3c-.4-.6-1.1-1-1.8-1-.3 0-.5.1-.8.2L6 7.2V11h2V8.9l1.8-.7"/>
+        </svg>
+      </div>
+    </div>
+  `,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+}) : null;
 
 const SIM_ROUTE: SimStep[] = [
   {
@@ -139,10 +165,29 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
     .slice(0, 4);
 
   // Grouped location categories for the landing page registry explorer
-  const categoryFilteredLocations = locations.filter(loc => {
-    if (activeTab === 'all') return true;
-    return loc.type === activeTab;
-  }).slice(0, 6);
+  const categoryFilteredLocations = (() => {
+    // Exclude catholic_church and prioritize deeper_life
+    const filtered = locations.filter(loc => loc.id !== 'catholic_church');
+    const deeperLifeLoc = filtered.find(loc => loc.id === 'deeper_life');
+    const others = filtered.filter(loc => loc.id !== 'deeper_life');
+    
+    // Put deeper_life at the very beginning of the catalog list
+    const reshuffled = deeperLifeLoc ? [deeperLifeLoc, ...others] : others;
+
+    return reshuffled.filter(loc => {
+      if (activeTab === 'all') return true;
+      return loc.type === activeTab;
+    }).slice(0, 6);
+  })();
+
+  const currentCoords = SIM_COORDS[SIM_ROUTE[simStepIdx].markerId] || SIM_COORDS.gate;
+  const nextCoords = SIM_COORDS[SIM_ROUTE[(simStepIdx + 1) % SIM_ROUTE.length].markerId] || SIM_COORDS.chapel;
+  const fillFrac = simProgress / 100;
+  
+  const walkerCoords: [number, number] = [
+    currentCoords[0] + (nextCoords[0] - currentCoords[0]) * fillFrac,
+    currentCoords[1] + (nextCoords[1] - currentCoords[1]) * fillFrac
+  ];
 
   // FAQ contents
   const faqs = [
@@ -200,10 +245,10 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigateToMap()}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/25 relative overflow-hidden group">
             <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Navigation className="text-white transform rotate-45 select-none transition-transform group-hover:scale-110" size={20} />
+            <Navigation className={cn(isDarkMode ? "text-white" : "text-blue-100", "transform rotate-45 select-none transition-transform group-hover:scale-110")} size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-display font-black tracking-tight leading-none text-slate-900 dark:text-white uppercase">
+            <h1 className="text-xl font-display font-black tracking-tight leading-none uppercase b">
               Campus<span className="bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">Gryd</span>
             </h1>
             <p className="text-[9px] font-mono font-bold text-blue-500 dark:text-sky-400 uppercase tracking-widest leading-none mt-1">
@@ -216,7 +261,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
         <div className="flex items-center gap-3">
           <button 
             onClick={() => onNavigateToMap()}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-650 hover:text-slate-100 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer"
           >
             <Map size={15} />
             Explore Map
@@ -240,7 +285,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
           {/* Primary Action CTA */}
           <button
             onClick={() => onNavigateToMap()}
-            className="px-5 py-2.5 bg-slate-900 hover:bg-blue-500 text-white dark:bg-blue-500 dark:hover:bg-blue-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 cursor-pointer relative overflow-hidden"
+            className={cn("px-5 py-2.5 bg-slate-900 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 cursor-pointer relative overflow-hidden", isDarkMode ? "text-white" : "text-blue-300")}
           >
             Launch Live Navigation
           </button>
@@ -271,7 +316,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6.5xl font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-[1.05]"
+              className="text-3xl sm:text-4.25xl lg:text-5.5xl font-display font-black tracking-tight uppercase leading-[1.05] b"
             >
               The Smarter Way <br />
               To Navigate <br />
@@ -284,7 +329,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               transition={{ duration: 0.5, delay: 0.15 }}
               className={cn(
                 "text-xs sm:text-sm md:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium transition-colors",
-                isDarkMode ? "text-slate-400" : "text-slate-650"
+                isDarkMode ? "text-slate-400" : "text-slate-600"
               )}
             >
               Seamlessly explore Rivers State University. Locate classrooms, administrative halls, and chaplaincies with coordinates-accurate OSRM walking pathways, custom user timetables, and intelligent Gemini AI dialogue.
@@ -362,7 +407,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                                 <MapPin size={16} />
                               </div>
                               <div>
-                                <p className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors text-ellipsis overflow-hidden line-clamp-1">{loc.officialName}</p>
+                                <p className="font-bold text-xs group-hover:text-emerald-500 transition-colors text-ellipsis overflow-hidden line-clamp-1 b">{loc.officialName}</p>
                                 <p className="text-[10px] text-slate-400 capitalize mt-0.5">{loc.landmark} • Coordinates: [{loc.coordinates.map(c => c.toFixed(4)).join(', ')}]</p>
                               </div>
                             </div>
@@ -400,9 +445,9 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
             {/* Find Path Primary */}
             <button
               onClick={() => onNavigateToMap()}
-              className="px-7 py-3.5 bg-slate-900 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2.5 shadow-xl shadow-blue-500/10 active:scale-95 transition-all cursor-pointer group"
+              className={cn("px-7 py-3.5 bg-slate-900 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2.5 shadow-xl shadow-blue-500/10 active:scale-95 transition-all cursor-pointer group", isDarkMode ? "text-white" : "text-blue-300")}
             >
-              <Navigation className="transform rotate-45 text-white shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 duration-200" size={15} />
+              <Navigation className={cn("transform rotate-45 shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 duration-200", isDarkMode ? "text-white" : "text-blue-300")} size={15} />
               Open Live Route Finder
             </button>
 
@@ -527,117 +572,61 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   transition={{ duration: 0.3 }}
                   className="absolute inset-0 p-5 flex flex-col justify-between"
                 >
-                  {/* Grid Vector Aesthetic Map Background with scalable SVG */}
-                  <div className="absolute inset-0 z-0">
-                    <svg className="w-full h-full opacity-35" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <pattern id="rsu-hero-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                          <circle cx="2" cy="2" r="1" fill="#334155" opacity="0.35" />
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#rsu-hero-grid)" />
+                  {/* Real Leaflet Map Simulation */}
+                  {typeof window !== 'undefined' && (
+                    <MapContainer
+                      center={[4.8015, 6.9840]}
+                      zoom={15}
+                      zoomControl={false}
+                      className="absolute inset-0 w-full h-full z-0 opacity-85"
+                      dragging={false}
+                      scrollWheelZoom={false}
+                      doubleClickZoom={false}
+                      touchZoom={false}
+                    >
+                      <TileLayer
+                        url={isDarkMode 
+                          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" 
+                          : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                        }
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      />
                       
-                      {/* Stylized Pedestrian Pathways around RSU Campus */}
-                      {/* Main Boulevard starting from top-right down past Chapel to South Gate */}
-                      <path d="M 370,40 L 290,110 L 295,170 L 200,190 Q 150,195 120,180" stroke="#1e293b" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M 370,40 L 290,110 L 295,170 L 200,190 Q 150,195 120,180" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-                      {/* Main Gate bypass directly heading west to Library and PG center */}
-                      <path d="M 370,40 L 220,50 L 120,110 L 30,110" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-                      <path d="M 370,40 L 220,50 L 120,110 L 30,110" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-
-                      {/* Library to Convocation Arena link down to Admin Senate */}
-                      <path d="M 30,110 L 120,135 L 120,180" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-
-                      {/* Highlighting Active Dynamic Walker Simulated Path (Main Gate -> Chapel -> Senate) */}
-                      <path 
-                        d="M 370,40 L 290,110 L 295,170 L 200,190 H 120" 
-                        stroke="rgba(59, 130, 246, 0.2)" 
-                        strokeWidth="8" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
+                      {/* Simulated Path Line */}
+                      <Polyline 
+                        positions={Object.values(SIM_COORDS)}
+                        color="#3b82f6" 
+                        weight={4}
+                        dashArray="5, 8"
+                        opacity={0.8}
                       />
-                      <path 
-                        d="M 370,40 L 290,110 L 295,170 L 200,190 H 120" 
-                        stroke="#3b82f6" 
-                        strokeWidth="2.5" 
-                        strokeDasharray="5 3"
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                      />
-                    </svg>
-                  </div>
 
-                  {/* Node Pins on Map */}
-                  <div className="absolute left-[88%] top-[12%] z-5 text-center -translate-x-1/2">
-                    <div className={cn(
-                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
-                      simStepIdx >= 0 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
-                    )}>
-                      🚪
-                    </div>
-                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">GATE</p>
-                  </div>
+                      {/* Display Waypoint Markers */}
+                      {Object.entries(SIM_COORDS).map(([id, coords]) => {
+                        const step = SIM_ROUTE.find(s => s.markerId === id);
+                        return (
+                          <Marker 
+                            key={id} 
+                            position={coords} 
+                            icon={createCustomIcon(id === 'gate' ? 'gate' : id === 'senate' ? 'admin' : 'facility', simStepIdx === SIM_ROUTE.findIndex(s => s.markerId === id))}
+                          >
+                            <Popup className="rsu-popup">
+                              <div className="p-2">
+                                <h4 className="font-bold uppercase text-xs text-rsu-navy">{step?.name}</h4>
+                                <p className="text-[10px] text-slate-500 mt-1">{step?.instruction}</p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
 
-                  <div className="absolute left-[72%] top-[39%] z-5 text-center -translate-x-1/2">
-                    <div className={cn(
-                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
-                      simStepIdx >= 1 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
-                    )}>
-                      ⛪
-                    </div>
-                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">CHAPEL</p>
-                  </div>
+                      {/* Animated Simulated Walker */}
+                      {walkerIcon && <Marker position={walkerCoords} icon={walkerIcon} />}
+                    </MapContainer>
+                  )}
 
-                  <div className="absolute left-[26%] top-[70%] z-5 text-center -translate-x-1/2">
-                    <div className={cn(
-                      "w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all border shadow-lg",
-                      simStepIdx >= 3 ? "bg-blue-500 border-white text-white" : "bg-slate-900 border-slate-700 text-slate-400"
-                    )}>
-                      🏛️
-                    </div>
-                    <p className="text-[7px] font-mono font-bold text-slate-400 mt-0.5 uppercase tracking-wide bg-slate-950/80 px-1 py-0.5 rounded leading-none">SENATE</p>
-                  </div>
-
-                  {/* Animated walking point based on scale */}
-                  {(() => {
-                    const nodes = [
-                      { x: 370, y: 40 },  // Main Gate
-                      { x: 290, y: 110 }, // Chapel
-                      { x: 295, y: 170 }, // Interm
-                      { x: 120, y: 180 }  // Senate
-                    ];
-                    const startNode = nodes[simStepIdx] || nodes[0];
-                    const nextIndex = (simStepIdx + 1) % nodes.length;
-                    const endNode = nodes[nextIndex] || nodes[1];
-                    const fraction = simProgress / 100;
-                    
-                    const posX = startNode.x + (endNode.x - startNode.x) * fraction;
-                    const posY = startNode.y + (endNode.y - startNode.y) * fraction;
-
-                    return (
-                      <div 
-                        className="absolute z-10 transition-all duration-150"
-                        style={{ 
-                          left: `${(posX / 400) * 100}%`, 
-                          top: `${(posY / 240) * 100}%`,
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                      >
-                        <div className="relative">
-                          <span className="absolute inset-0 rounded-full bg-blue-500/40 animate-ping" />
-                          <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-500/40 border border-white">
-                            <Footprints size={11} className="animate-bounce" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="pt-2" />
-
-                  {/* Live Navigation Guidance Box */}
-                  <div className="w-full max-w-sm mx-auto space-y-2.5 p-3.5 bg-slate-900/95 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl z-10">
+                  {/* Live Navigation Guidance Box Overlay */}
+                  <div className="absolute bottom-4 inset-x-4 mx-auto w-[90%] max-w-sm space-y-2.5 p-3 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl z-20 transition-all duration-300">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="p-0.5 px-2 bg-blue-500/10 text-blue-400 rounded text-[8px] font-black uppercase tracking-wider border border-blue-500/20">
@@ -787,7 +776,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               <span className="text-[9px] font-mono font-black tracking-widest text-blue-500 dark:text-blue-400 uppercase bg-blue-500/10 dark:bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/10">
                 CAMPUS LANDMARKS DATABASE
               </span>
-              <h3 className="text-2xl md:text-3.5xl font-display font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <h3 className="text-2xl md:text-3.5xl font-display font-black uppercase tracking-tight b">
                 Inspect coordinates directly.
               </h3>
               <p className={cn(
@@ -807,10 +796,10 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   className={cn(
                     "px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95",
                     activeTab === tab
-                      ? "bg-slate-900 text-white dark:bg-blue-600 dark:text-white font-black shadow-md shadow-blue-500/5"
+                      ? cn("bg-slate-900 dark:bg-blue-600 font-black shadow-md shadow-blue-500/5", isDarkMode ? "text-white" : "text-blue-300")
                       : isDarkMode
                         ? "bg-slate-900/40 border border-slate-850 hover:bg-slate-850 hover:text-white text-slate-400"
-                        : "bg-white border border-slate-200 hover:bg-slate-50 text-slate-650"
+                        : "bg-white border border-slate-200 hover:bg-slate-50 text-slate-600"
                   )}
                 >
                   {tab === 'all' ? 'All Registry' : tab}
@@ -844,7 +833,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                       </span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-display font-black text-slate-900 dark:text-white uppercase leading-snug group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                      <h4 className="text-sm font-display font-black uppercase leading-snug group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors b">
                         {loc.officialName}
                       </h4>
                       <p className={cn(
@@ -901,7 +890,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
             <span className="text-[10px] font-black tracking-widest text-blue-500 dark:text-blue-400 bg-blue-500/15 dark:bg-blue-500/10 px-3.5 py-1.5 rounded-full border border-blue-500/10">
               CORE CAPABILITIES
             </span>
-            <h3 className="text-2xl md:text-3.5xl font-display font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            <h3 className="text-2xl md:text-3.5xl font-display font-black uppercase tracking-tight b">
               A smarter way to navigate campus resources.
             </h3>
             <p className={cn(
@@ -925,7 +914,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   <Compass size={20} className="animate-pulse" />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-base font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
+                  <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
                     Optimal Pedestrian Paths
                   </h4>
                   <p className={cn(
@@ -954,7 +943,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   <BookOpen size={20} />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-base font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
+                  <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
                     Schedules Syncing
                   </h4>
                   <p className={cn(
@@ -983,7 +972,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   <Calendar size={20} />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-base font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
+                  <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
                     Matriculation & Seminars
                   </h4>
                   <p className={cn(
@@ -1012,7 +1001,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   <Sparkles size={20} />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-base font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
+                  <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
                     Gemini AI Compass
                   </h4>
                   <p className={cn(
@@ -1041,7 +1030,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                   <Bookmark size={20} />
                 </div>
                 <div className="space-y-3">
-                  <h4 className="text-base font-display font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
+                  <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
                     Bookmarks, Saved Places & Cloud Sync Backup
                   </h4>
                   <p className={cn(
@@ -1076,7 +1065,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
           <div className="absolute right-0 top-0 w-44 h-44 bg-blue-500/5 rounded-full blur-3xl" />
 
           <div className="space-y-2.5 max-w-lg text-center md:text-left">
-            <h4 className="text-2xl font-display font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">
+            <h4 className="text-2xl font-display font-black uppercase tracking-tight leading-none b">
               Verified mapping ready.
             </h4>
             <p className={cn(
@@ -1089,11 +1078,11 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
 
           <div className="grid grid-cols-2 gap-8 md:gap-14 shrink-0 text-center">
             <div className="space-y-1">
-              <h5 className="text-3xl md:text-4.5xl font-display font-black text-slate-900 dark:text-white uppercase">55+</h5>
+              <h5 className="text-3xl md:text-4.5xl font-display font-black uppercase b">55+</h5>
               <p className="text-[10px] font-mono text-blue-500 font-bold uppercase tracking-wider">GEODIC LANDMARKS</p>
             </div>
             <div className="space-y-1">
-              <h5 className="text-3xl md:text-4.5xl font-display font-black text-slate-900 dark:text-white uppercase">100%</h5>
+              <h5 className="text-3xl md:text-4.5xl font-display font-black uppercase b">100%</h5>
               <p className="text-[10px] font-mono text-blue-500 font-bold uppercase tracking-wider">PEDESTRIAN ROADS</p>
             </div>
           </div>
@@ -1104,7 +1093,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
       <section className="px-4 md:px-8 py-12 max-w-4xl mx-auto w-full">
         <div className="space-y-8">
           <div className="text-center space-y-2">
-            <h4 className="text-2xl font-display font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            <h4 className="text-2xl font-display font-black uppercase tracking-tight b">
               FREQUENTLY ASKED INQUIRIES
             </h4>
             <p className={cn(
@@ -1130,7 +1119,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                 >
                   <button
                     onClick={() => setExpandedFaq(isExpanded ? null : idx)}
-                    className="w-full flex items-center justify-between p-4.5 font-bold uppercase tracking-tight text-xs lg:text-sm text-left select-none text-slate-900 dark:text-white hover:text-blue-500 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between p-4.5 font-bold uppercase tracking-tight text-xs lg:text-sm text-left select-none hover:text-blue-500 transition-colors cursor-pointer b"
                   >
                     <span>{faq.q}</span>
                     <span className={cn(
@@ -1171,7 +1160,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
           <p className="text-[10px] font-mono text-blue-500 font-bold uppercase tracking-widest">
             RSU STUDENT VOICES
           </p>
-          <h4 className="text-xl md:text-2.5xl font-display font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h4 className="text-xl md:text-2.5xl font-display font-black uppercase tracking-tight b">
             Loved by Rivers State University Students.
           </h4>
         </div>
@@ -1191,7 +1180,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               &ldquo;Finding the science block and New Senate on my first matriculation day was absolutely stress-free with CampusGryd's step guidance. Avoided the typical campus orientation stress.&rdquo;
             </p>
             <div>
-              <p className="text-xs font-black text-slate-950 dark:text-white uppercase">Philemon Progress</p>
+              <p className="text-xs font-black uppercase b">Philemon Progress</p>
               <p className="text-[10px] text-slate-400">Mechanical Engineering Student • Year 3</p>
             </div>
           </div>
@@ -1210,7 +1199,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               &ldquo;The lecture schedule integration is a total CA-saver. Direct notifications linking to the mapped directions ensures I always make it to continuous assessments on time.&rdquo;
             </p>
             <div>
-              <p className="text-xs font-black text-slate-950 dark:text-white uppercase">Amadi Precious</p>
+              <p className="text-xs font-black uppercase b">Amadi Precious</p>
               <p className="text-[10px] text-slate-400">Faculty of Sciences • Year 2</p>
             </div>
           </div>
@@ -1225,11 +1214,11 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 text-xs font-semibold">
           
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white font-black text-[11px] shadow-sm select-none">
+            <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center font-black text-[11px] shadow-sm select-none", isDarkMode ? "text-white" : "text-blue-100")}>
               CG
             </div>
             <div>
-              <p className="font-bold text-slate-900 dark:text-white uppercase tracking-tight text-xs">
+              <p className="font-bold uppercase tracking-tight text-xs b">
                 CAMPUSGRYD NAVIGATION SUITE
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5">© 2026 Rivers State University Initiative</p>
@@ -1251,7 +1240,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
           </div>
 
           <div className="text-center md:text-right">
-            <p className="text-[10px] font-mono text-slate-400 dark:text-slate-650">
+            <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
               Coordinates Registry Verified v5.32 • RSU Campus Navigator
             </p>
           </div>
