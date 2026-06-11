@@ -1176,7 +1176,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               &ldquo;Finding the science block and New Senate on my first matriculation day was absolutely stress-free with CampusGryd's step guidance. Avoided the typical campus orientation stress.&rdquo;
             </p>
             <div>
-              <p className="text-xs font-black uppercase b">Philemon Progress</p>
+              <p className="text-xs font-black uppercase b">Emmanuel Chinedu</p>
               <p className="text-[10px] text-slate-400">Mechanical Engineering Student • Year 3</p>
             </div>
           </div>
@@ -1195,7 +1195,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
               &ldquo;The lecture schedule integration is a total CA-saver. Direct notifications linking to the mapped directions ensures I always make it to continuous assessments on time.&rdquo;
             </p>
             <div>
-              <p className="text-xs font-black uppercase b">Amadi Precious</p>
+              <p className="text-xs font-black uppercase b">Blessing Alaba</p>
               <p className="text-[10px] text-slate-400">Faculty of Sciences • Year 2</p>
             </div>
           </div>
