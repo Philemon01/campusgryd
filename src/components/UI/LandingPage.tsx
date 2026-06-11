@@ -973,22 +973,18 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
                 </div>
                 <div className="space-y-2">
                   <h4 className="text-base font-display font-black tracking-tight uppercase leading-none b">
-                    Matriculation & Seminars
+                    Events
                   </h4>
                   <p className={cn(
-                    "text-xs leading-relaxed",
-                    isDarkMode ? "text-slate-400" : "text-slate-500"
+                    "text-xs font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400 animate-pulse mt-1"
                   )}>
-                    Review active seminars or events across campus (Convocation Arena, faculties) with quick distance-calculation overlays.
+                    Coming Soon
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => onNavigateToMap(null, false, true)}
-                className="text-[10px] font-black uppercase text-blue-500 tracking-widest flex items-center gap-1 hover:gap-2 transition-all self-start"
-              >
-                Browse Seminars <ChevronRight size={12} />
-              </button>
+              <div className="text-[10px] font-mono font-bold text-slate-400 uppercase select-none">
+                Development in progress
+              </div>
             </div>
 
             {/* Box 4 - Chat pilot */}
@@ -1235,7 +1231,7 @@ export function LandingPage({ isDarkMode, setIsDarkMode, onNavigateToMap }: Land
             </span>
             <span className="text-slate-400 dark:text-slate-800">•</span>
             <span className="hover:text-blue-500 cursor-pointer" onClick={() => onNavigateToMap(null, false, true)}>
-              Campus Venues
+              Events
             </span>
           </div>
 

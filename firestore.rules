@@ -123,5 +123,28 @@ service cloud.firestore {
       allow update: if isSignedIn() && resource.data.userId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
+
+    // 5. User Contributed Locations
+    match /user_locations/{locationId} {
+      function isValidUserLocation(data) {
+        return data.id is string && data.id.size() <= 128
+          && data.ownerId == request.auth.uid
+          && data.officialName is string && data.officialName.size() <= 256
+          && data.aliases is list && data.aliases.size() <= 20
+          && data.type is string && data.type.size() <= 64
+          && data.description is string && data.description.size() <= 1024
+          && data.landmark is string && data.landmark.size() <= 256
+          && data.coordinates is list && data.coordinates.size() == 2
+          && data.coordinates[0] is number
+          && data.coordinates[1] is number
+          && data.createdAt is string && data.createdAt.size() <= 64;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isValidId(locationId) && isValidUserLocation(incoming());
+      allow update: if isSignedIn() && isValidId(locationId) && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId && isValidUserLocation(incoming());
+      allow delete: if isSignedIn() && isValidId(locationId) && isOwner(existing().ownerId);
+    }
   }
 }

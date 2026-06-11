@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, LocateFixed, Calendar, BookOpen } from 'lucide-react';
+import { Layers, LocateFixed, Calendar, BookOpen, MapPin } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface FloatingActionsProps {
@@ -10,6 +10,9 @@ interface FloatingActionsProps {
   isFollowingUser: boolean;
   toggleEvents: () => void;
   toggleTimetable: () => void;
+  isSignedIn: boolean;
+  onAddLocationClick: () => void;
+  isLocating: boolean;
 }
 
 export const FloatingActions: React.FC<FloatingActionsProps> = ({
@@ -19,7 +22,10 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
   handleLocateMe,
   isFollowingUser,
   toggleEvents,
-  toggleTimetable
+  toggleTimetable,
+  isSignedIn,
+  onAddLocationClick,
+  isLocating
 }) => {
   return (
     <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
@@ -30,6 +36,24 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
       >
         <BookOpen size={28} />
       </button>
+
+      {isSignedIn && (
+        <button
+          onClick={onAddLocationClick}
+          disabled={isLocating}
+          className={cn(
+            "p-3 rounded-full shadow-lg border transition-all duration-300 flex items-center justify-center scale-110",
+            isLocating 
+              ? "bg-slate-300 text-slate-500 animate-pulse border-slate-300"
+              : "bg-[#0ea5e9] text-white border-[#0ea5e9] hover:bg-rsu-orange hover:border-rsu-orange",
+            "dark:bg-emerald-600 dark:text-white dark:border-emerald-600 dark:hover:bg-rsu-orange dark:hover:border-rsu-orange"
+          )}
+          title="Add Custom Location (Checks GPS)"
+          id="add-custom-location-btn"
+        >
+          <MapPin size={24} className={cn(isLocating && "animate-spin")} />
+        </button>
+      )}
 
       <button
         onClick={() => {

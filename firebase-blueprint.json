@@ -45,6 +45,23 @@
         "locationId": { "type": "string", "description": "Matched to campus locations.id" }
       },
       "required": ["courseCode", "day", "startTime", "endTime"]
+    },
+    "UserLocation": {
+      "title": "User Contributed Location",
+      "description": "A student or user contributed campus custom location.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "officialName": { "type": "string" },
+        "aliases": { "type": "array" },
+        "coordinates": { "type": "array" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "landmark": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "officialName", "aliases", "coordinates", "type", "ownerId", "createdAt"]
     }
   },
   "firestore": {
@@ -59,6 +76,10 @@
     "/timetables/{timetableId}/slots/{slotId}": {
       "schema": "TimetableSlot",
       "description": "Individual slots for a timetable."
+    },
+    "/user_locations/{locationId}": {
+      "schema": "UserLocation",
+      "description": "Community shared student-defined landmarks and places."
     }
   }
 }

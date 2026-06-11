@@ -31,10 +31,57 @@ import { CustomCampusRouter, RoutingMode } from './services/router';
 import { fetchOSRMRoute, OSRMRoute, OSRMStep } from './services/osrm';
 import { GeminiChatService } from './services/geminiService';
 import { ChatBot } from './components/Chat/ChatBot';
-import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db, auth, googleProvider, setCachedAccessToken, getCachedAccessToken } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { FeatureCollection } from 'geojson';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 type Category = 'all' | 'faculty' | 'college' | 'admin' | 'hostel' | 'food' | 'gate' | 'sports' | 'library' | 'facility' | 'landmark' | 'department';
 
@@ -121,13 +168,53 @@ export default function App() {
     return [];
   });
 
+  const [customLocations, setCustomLocations] = useState<Location[]>([]);
+
+  // Add Landmark Form States:
+  const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [newLocCoords, setNewLocCoords] = useState<[number, number] | null>(null);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocAliasString, setNewLocAliasString] = useState('');
+  const [newLocType, setNewLocType] = useState<Category>('landmark');
+  const [newLocDescription, setNewLocDescription] = useState('');
+
+  // Fetch community-added locations upon mount and sync updates
+  useEffect(() => {
+    const q = collection(db, 'user_locations');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: Location[] = [];
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        list.push({
+          id: d.id,
+          officialName: d.officialName,
+          aliases: d.aliases || [],
+          coordinates: d.coordinates as [number, number],
+          type: d.type || 'landmark',
+          description: d.description || '',
+          landmark: d.landmark || 'No',
+        });
+      });
+      setCustomLocations(list);
+    }, (error) => {
+      console.error("Error fetching user locations: ", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const allLocations = useMemo(() => {
+    return [...locations, ...customLocations];
+  }, [customLocations]);
+
   const campusRouter = useMemo(() => {
     return new CustomCampusRouter(mapFeaturesData as FeatureCollection);
   }, []);
 
   const chatService = useMemo(() => {
-    return new GeminiChatService(locations);
-  }, []);
+    return new GeminiChatService(allLocations);
+  }, [allLocations]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -294,7 +381,7 @@ export default function App() {
   const findClosestLocation = (lat: number, lng: number): Location | null => {
     let closest: Location | null = null;
     let minDist = Infinity;
-    for (const loc of locations) {
+    for (const loc of allLocations) {
       if (!loc.coordinates) continue;
       const R = 6371e3;
       const φ1 = lat * Math.PI/180;
@@ -642,11 +729,11 @@ export default function App() {
   }, [isDarkMode]);
 
   const fuse = useMemo(() => {
-    return new Fuse(locations, {
+    return new Fuse(allLocations, {
       keys: ['officialName', 'aliases', 'type', 'description'],
       threshold: 0.4,
     });
-  }, []);
+  }, [allLocations]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery) return [];
@@ -654,16 +741,16 @@ export default function App() {
   }, [searchQuery, fuse]);
 
   const filteredLocations = useMemo(() => {
-    if (activeCategory === 'all') return locations;
+    if (activeCategory === 'all') return allLocations;
     if (activeCategory === 'department' as any) {
-      return locations.filter(loc => 
+      return allLocations.filter(loc => 
         loc.officialName.toLowerCase().includes('dept') || 
         loc.officialName.toLowerCase().includes('department') ||
         loc.aliases.some(a => a.toLowerCase().includes('dept') || a.toLowerCase().includes('department'))
       );
     }
-    return locations.filter(loc => loc.type === activeCategory);
-  }, [activeCategory]);
+    return allLocations.filter(loc => loc.type === activeCategory);
+  }, [activeCategory, allLocations]);
 
   const handleLocationSelect = React.useCallback(async (loc: Location | null) => {
     if (loc) {
@@ -698,7 +785,7 @@ export default function App() {
   }, [searchMode, userLocation]);
 
   const handleEventNavigation = (locationId: string) => {
-    const loc = locations.find(l => l.id === locationId);
+    const loc = allLocations.find(l => l.id === locationId);
     if (loc) {
       handleLocationSelect(loc);
       setIsEventsPanelOpen(false);
@@ -728,8 +815,8 @@ export default function App() {
     setSavedLocationIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const savedLocations = useMemo(() => locations.filter(loc => savedLocationIds.includes(loc.id)), [savedLocationIds]);
-  const recentLocations = useMemo(() => recentLocationIds.map(id => locations.find(loc => loc.id === id)).filter(Boolean) as Location[], [recentLocationIds]);
+  const savedLocations = useMemo(() => allLocations.filter(loc => savedLocationIds.includes(loc.id)), [savedLocationIds, allLocations]);
+  const recentLocations = useMemo(() => recentLocationIds.map(id => allLocations.find(loc => loc.id === id)).filter(Boolean) as Location[], [recentLocationIds, allLocations]);
 
   const totalRemainingDistance = useMemo(() => {
     if (!maneuvers || currentManeuverIndex < 0) return 0;
@@ -948,9 +1035,9 @@ export default function App() {
           currentStepIndex: -1 
         };
       } else if ((intent.type === 'navigate' || intent.type === 'query') && intent.destinationId) {
-        const dest = locations.find(l => l.id === intent.destinationId);
+        const dest = allLocations.find(l => l.id === intent.destinationId);
         if (dest) {
-          const origin = intent.originId ? locations.find(l => l.id === intent.originId) : null;
+          const origin = intent.originId ? allLocations.find(l => l.id === intent.originId) : null;
           const start = origin?.coordinates || userLocation || RSU_CENTER;
           calculatedDistance = Math.floor(getDistanceInMeters(start, dest.coordinates));
           
@@ -973,9 +1060,9 @@ export default function App() {
       }
     } else if (navSession.phase === 'clarification') {
       if (intent.type === 'navigate' && intent.destinationId && !intent.isVague) {
-        const dest = locations.find(l => l.id === intent.destinationId);
+        const dest = allLocations.find(l => l.id === intent.destinationId);
         if (dest) {
-          const origin = intent.originId ? locations.find(l => l.id === intent.originId) : (updatedSession.originId ? locations.find(l => l.id === updatedSession.originId) : null);
+          const origin = intent.originId ? allLocations.find(l => l.id === intent.originId) : (updatedSession.originId ? allLocations.find(l => l.id === updatedSession.originId) : null);
           const start = origin?.coordinates || userLocation || RSU_CENTER;
           calculatedDistance = Math.floor(getDistanceInMeters(start, dest.coordinates));
           nextPhase = 'selection';
@@ -991,9 +1078,9 @@ export default function App() {
     } else if (navSession.phase === 'selection') {
       if (intent.type === 'choice' && intent.value) {
         nextPhase = 'guidance';
-        const dest = locations.find(l => l.id === updatedSession.destinationId);
+        const dest = allLocations.find(l => l.id === updatedSession.destinationId);
         if (dest) {
-          const origin = updatedSession.originId ? locations.find(l => l.id === updatedSession.originId) : null;
+          const origin = updatedSession.originId ? allLocations.find(l => l.id === updatedSession.originId) : null;
           if (origin) setStartLocation(origin);
           
           const steps = await startNavigation(dest);
@@ -1084,6 +1171,91 @@ export default function App() {
       triggerHaptic([100, 50, 100, 50, 200]);
     }
   }, [currentManeuverIndex, maneuvers, isVoiceAssistEnabled, playVoiceDirections]);
+
+  const handleRequestAddLocation = () => {
+    if (!currentUser) {
+      setNotification({ message: 'Please sign in to add landmarks!', type: 'error' });
+      return;
+    }
+    setIsLocating(true);
+    setNotification({ message: 'Locating via GPS satellites...', type: 'info' });
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsLocating(false);
+        const { latitude, longitude } = position.coords;
+        setNewLocCoords([latitude, longitude]);
+        setIsAddLocationOpen(true);
+        setNotification({ message: 'GPS coordinate lock successful!', type: 'success' });
+      },
+      (error) => {
+        setIsLocating(false);
+        let errorMsg = 'Could not lock GPS. Please grant system access.';
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = 'GPS Access Denied. Make sure browser permissions are allowed.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMsg = 'Position unavailable. Try moving outdoors.';
+        } else if (error.code === error.TIMEOUT) {
+          errorMsg = 'GPS request timed out. Please try again.';
+        }
+        setNotification({ message: errorMsg, type: 'error' });
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  };
+
+  const handleSaveCustomLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      setNotification({ message: 'You must be signed in to add locations!', type: 'error' });
+      return;
+    }
+    if (!newLocCoords) {
+      setNotification({ message: 'No GPS coordinate locked! Try again.', type: 'error' });
+      return;
+    }
+    const trimmedName = newLocName.trim();
+    if (!trimmedName) {
+      setNotification({ message: 'Please provide a valid name.', type: 'error' });
+      return;
+    }
+
+    const newId = `custom_${Date.now()}`;
+    const aliasArray = newLocAliasString
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+
+    const data = {
+      id: newId,
+      officialName: trimmedName,
+      aliases: aliasArray,
+      coordinates: [newLocCoords[0], newLocCoords[1]],
+      type: newLocType,
+      description: newLocDescription.trim() || `Community added landmark contributed by RSU student.`,
+      landmark: 'Yes',
+      ownerId: currentUser.uid,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const docRef = doc(db, 'user_locations', newId);
+      await setDoc(docRef, data);
+      setIsAddLocationOpen(false);
+      
+      // Clear fields
+      setNewLocName('');
+      setNewLocAliasString('');
+      setNewLocCoords(null);
+      setNewLocDescription('');
+      setNewLocType('landmark');
+      
+      setNotification({ message: `Landmark "${trimmedName}" successfully saved to RSU campus!`, type: 'success' });
+    } catch (err) {
+      console.error(err);
+      handleFirestoreError(err, OperationType.WRITE, `user_locations/${newId}`);
+    }
+  };
 
   const isPrivacyPage = currentPath === '/privacy-policy' || currentPath === '/privacy';
   const isTermsPage = currentPath === '/terms-of-service' || currentPath === '/terms';
@@ -1196,6 +1368,9 @@ export default function App() {
         isFollowingUser={isFollowingUser}
         toggleEvents={() => setIsEventsPanelOpen(!isEventsPanelOpen)}
         toggleTimetable={() => setIsTimetableOpen(!isTimetableOpen)}
+        isSignedIn={!!currentUser}
+        onAddLocationClick={handleRequestAddLocation}
+        isLocating={isLocating}
       />
 
       <AnimatePresence>
@@ -1260,7 +1435,7 @@ export default function App() {
       <ChatBot 
         onSendMessage={handleChatMessage}
         onLocationFocus={(id) => {
-          const loc = locations.find(l => l.id === id);
+          const loc = allLocations.find(l => l.id === id);
           if (loc) handleLocationSelect(loc);
         }}
         isNavigating={isNavigating}
@@ -1270,6 +1445,136 @@ export default function App() {
         onOpenChange={setIsChatOpen}
         showFloatingButton={false}
       />
+
+      {/* Add Custom Location Dialog */}
+      <AnimatePresence>
+        {isAddLocationOpen && newLocCoords && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white dark:bg-[#1E293B] text-slate-800 dark:text-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-150 dark:border-slate-800"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#0ea5e9] to-[#0284c7] p-5 text-white flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg">Pin Custom Landmark</h3>
+                  <p className="text-xs text-white/80 mt-0.5">Define your custom landmark on RSU Campus Registry</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddLocationOpen(false)}
+                  className="p-1.5 hover:bg-white/10 rounded-full text-white transition-all text-xs font-semibold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveCustomLocation} className="p-5 flex flex-col gap-4">
+                {/* Coordinates Read-only Badge */}
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800/80">
+                  <div className="p-1 px-2.5 bg-[#0ea5e9]/10 text-[#0ea5e9] text-xs font-mono font-semibold rounded">
+                    GPS LOCKED
+                  </div>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                    {newLocCoords[0].toFixed(6)}, {newLocCoords[1].toFixed(6)}
+                  </span>
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label htmlFor="custom-loc-name" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Landmark Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="custom-loc-name"
+                    type="text"
+                    required
+                    value={newLocName}
+                    onChange={(e) => setNewLocName(e.target.value)}
+                    placeholder="e.g. Our Lady Seat of Wisdom Catholic Church"
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]"
+                  />
+                </div>
+
+                {/* Alias */}
+                <div>
+                  <label htmlFor="custom-loc-aliases" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Aliases / Alternate Names (Comma-separated)
+                  </label>
+                  <input
+                    id="custom-loc-aliases"
+                    type="text"
+                    value={newLocAliasString}
+                    onChange={(e) => setNewLocAliasString(e.target.value)}
+                    placeholder="e.g. Wisdom Chapel, Catholic Church"
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]"
+                  />
+                </div>
+
+                {/* Category Type */}
+                <div>
+                  <label htmlFor="custom-loc-type" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Category Type
+                  </label>
+                  <select
+                    id="custom-loc-type"
+                    value={newLocType}
+                    onChange={(e) => setNewLocType(e.target.value as Category)}
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]"
+                  >
+                    <option value="landmark">Landmark</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="gate">Gate</option>
+                    <option value="facility">Facility/Hall</option>
+                    <option value="food">Food Spot</option>
+                    <option value="department">Department</option>
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label htmlFor="custom-loc-desc" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Description / Helpful Hint
+                  </label>
+                  <textarea
+                    id="custom-loc-desc"
+                    value={newLocDescription}
+                    onChange={(e) => setNewLocDescription(e.target.value)}
+                    placeholder="Describe how to recognize this spot, or its significance..."
+                    rows={2}
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] resize-none"
+                  />
+                </div>
+
+                {/* Submit & Cancel */}
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddLocationOpen(false)}
+                    className="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-gradient-to-r from-[#0ea5e9] to-[#0284c7] hover:from-[#0284c7] hover:to-[#0369a1] text-white text-sm font-bold rounded-lg shadow-sm hover:shadow transition-all"
+                  >
+                    Save Landmark
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Bottom Left Profile/Auth Widget */}
       <AnimatePresence>
